@@ -1,0 +1,19 @@
+# environments / caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# never commit data, indexes, models, secrets
+data/
+state/
+models/
+*.parquet
+.env
+
+# large generated outputs (small JSONL results ARE committed)
+results/**/*.png
+results/**/*.pdf
