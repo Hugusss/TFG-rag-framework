@@ -11,7 +11,9 @@ requires-python = ">=3.12"
 authors = [{ name = "Hugo Miranda" }]
 # Runtime dependencies are added together with the component that first
 # needs them, so every addition is traceable to a seam.
-dependencies = []
+dependencies = [
+    "pyyaml>=6,<7",  # config seam
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=9,<10"]
