@@ -1,0 +1,157 @@
+"""Embedding adapter that serves the corpus's official vectors.
+
+Second half of the project's central design move (ADR-002): the OWI
+dataset ships one official jina-v5 vector per publisher chunk, and they
+enter the pipeline as an ordinary EmbeddingProvider — never as a
+special path in the orchestrator.
+
+The official embeddings parquet
+(``metadata_N_embeddings.parquet {record_id, chunk_idx, embedding}``)
+is read here and nowhere else. Vectors are looked up by
+``(chunk.document_id, chunk.position)`` — identity, not text (ADR-005)
+— which is why clipping a window's text never affects which vector it
+gets, and why ``Chunk.position`` must equal the publisher's
+``chunk_idx`` (guaranteed by the publisher_offsets chunker).
+
+A chunk without its vector raises :class:`EmbeddingError`, never a
+quiet re-encode: a miss means the chunker and the vector table disagree
+about the corpus, and continuing would invalidate the experiment.
+
+``embed_query`` is not yet available here: encoding queries requires
+the live jina-v5 encoder, which lands with the retrieval increment
+(Week 2). Ingestion never embeds queries, so the Week-1 gate does not
+need it — a deliberate scope reduction (Rule 10), loud when hit.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pyarrow as pa
+import pyarrow.compute as pc
+import pyarrow.parquet as pq
+
+from rag_framework.embeddings.base import EmbeddingError, EmbeddingProvider
+from rag_framework.models import Chunk
+
+_EMBEDDINGS_NAME = re.compile(r"^metadata_\d+_embeddings\.parquet$")
+_COLUMNS = ["record_id", "chunk_idx", "embedding"]
+
+
+class PrecomputedEmbeddingProvider(EmbeddingProvider):
+    """Serves official corpus vectors by (document_id, position)."""
+
+    def __init__(self, source: str | Path, *, model_id: str) -> None:
+        self.model_id = model_id
+        self.normalized = True  # v2.0.0 corpus contract: unit vectors
+        root = Path(source)
+        files = sorted(
+            path
+            for path in root.rglob("metadata_*_embeddings.parquet")
+            if _EMBEDDINGS_NAME.match(path.name)
+        )
+        if not files:
+            raise EmbeddingError(
+                f"no embeddings parquet files found under {root}"
+            )
+
+        tables = []
+        reference_schema = None
+        reference_file = None
+        for file in files:
+            try:
+                names = set(pq.read_schema(file).names)
+            except (OSError, ValueError) as error:
+                raise EmbeddingError(
+                    f"unreadable embeddings file {file}: {error}"
+                ) from error
+            missing = set(_COLUMNS) - names
+            if missing:
+                raise EmbeddingError(
+                    f"{file}: missing required column(s):"
+                    f" {', '.join(sorted(missing))}"
+                )
+            try:
+                shard = pq.read_table(file, columns=_COLUMNS)
+            except (OSError, ValueError) as error:
+                raise EmbeddingError(
+                    f"failed reading embeddings file {file}: {error}"
+                ) from error
+            if reference_schema is None:
+                reference_schema, reference_file = shard.schema, file
+            elif shard.schema != reference_schema:
+                raise EmbeddingError(
+                    f"{file}: schema differs from {reference_file}"
+                    " (mixed corpus versions?)"
+                )
+            tables.append(shard)
+
+        try:
+            table = pa.concat_tables(tables)
+        except (OSError, ValueError) as error:
+            raise EmbeddingError(
+                f"could not combine embeddings shards under {root}: {error}"
+            ) from error
+        if table.num_rows == 0:
+            raise EmbeddingError(f"embeddings files under {root} are empty")
+
+        embedding_column = table.column("embedding")
+        if embedding_column.null_count:
+            raise EmbeddingError(
+                f"{embedding_column.null_count} null embedding value(s)"
+                f" under {root}"
+            )
+        if pc.list_flatten(embedding_column).null_count:
+            raise EmbeddingError(
+                f"embedding vectors under {root} contain null elements"
+            )
+        lengths = pc.list_value_length(embedding_column)
+        low, high = pc.min(lengths).as_py(), pc.max(lengths).as_py()
+        if low is None or low != high:
+            raise EmbeddingError(
+                f"inconsistent embedding dimensions under {root}:"
+                f" {low}..{high}"
+            )
+        if low < 1:
+            raise EmbeddingError(
+                f"zero-dimensional embedding vectors under {root}"
+            )
+        self.dimension = high
+
+        index: dict[tuple[str, int], int] = {}
+        record_ids = table.column("record_id").to_pylist()
+        chunk_idxs = table.column("chunk_idx").to_pylist()
+        for row, key in enumerate(zip(record_ids, chunk_idxs)):
+            if key[0] is None or key[1] is None:
+                raise EmbeddingError(
+                    f"embeddings row {row} has a null record_id/chunk_idx"
+                )
+            if key in index:
+                raise EmbeddingError(
+                    f"duplicate vector for record {key[0]} chunk {key[1]}"
+                )
+            index[key] = row
+        self._index = index
+        # vectors stay in the fp16 arrow column (~13 MB for the full
+        # slice); they are converted to python floats per lookup
+        self._vectors = table.column("embedding")
+
+    def embed_documents(self, chunks: list[Chunk]) -> list[list[float]]:
+        vectors = []
+        for chunk in chunks:
+            row = self._index.get((chunk.document_id, chunk.position))
+            if row is None:
+                raise EmbeddingError(
+                    f"no official vector for document {chunk.document_id}"
+                    f" position {chunk.position}: the chunker and the"
+                    " embeddings table disagree about the corpus"
+                )
+            vectors.append(self._vectors[row].as_py())
+        return vectors
+
+    def embed_query(self, text: str) -> list[float]:
+        raise NotImplementedError(
+            "query encoding requires the live jina-v5 encoder and lands"
+            " with the retrieval increment; ingestion never embeds queries"
+        )
