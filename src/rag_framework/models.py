@@ -70,6 +70,19 @@ def make_chunk_id(document_id: str, position: int, text: str) -> str:
 
 
 @dataclass(frozen=True, slots=True)
+class Rejection:
+    """One skipped input record: where it came from and why.
+
+    The shared honesty currency (Rule 6): loaders and chunkers append
+    these instead of silently dropping data, and ingestion reports
+    count them.
+    """
+
+    source: str
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
 class Document:
     """A normalized source document, independent of any dataset format."""
 

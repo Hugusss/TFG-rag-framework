@@ -5,10 +5,9 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from dataclasses import dataclass
 from pathlib import Path
 
-from rag_framework.models import Document
+from rag_framework.models import Document, Rejection
 
 _logger = logging.getLogger(__name__)
 
@@ -21,14 +20,6 @@ class LoaderError(Exception):
     silently smaller corpus. Per-record problems are rejections, not
     errors.
     """
-
-
-@dataclass(frozen=True, slots=True)
-class Rejection:
-    """One skipped record: where it came from and why it was skipped."""
-
-    source: str
-    reason: str
 
 
 class DocumentLoader(ABC):
