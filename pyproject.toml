@@ -12,8 +12,9 @@ authors = [{ name = "Hugo Miranda" }]
 # Runtime dependencies are added together with the component that first
 # needs them, so every addition is traceable to a seam.
 dependencies = [
-    "pyyaml>=6,<7",    # config seam
-    "pyarrow>=25,<26", # owi loader seam
+    "pyyaml>=6,<7",      # config seam
+    "pyarrow>=25,<26",   # owi loader seam
+    "chromadb>=1.5,<1.6",  # chroma vector-store seam; pinned minor (behavior drift risk), exact version in run manifests
 ]
 
 [project.optional-dependencies]
