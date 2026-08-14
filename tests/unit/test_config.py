@@ -66,6 +66,13 @@ class TestHappyPath:
         assert config.retrieval.mode == "sequential"
         assert config.generation.enabled is False
 
+    def test_dataset_version_optional_for_reproducibility(self, tmp_path):
+        data = base()
+        assert load(tmp_path, data).dataset.version is None
+        data["dataset"]["version"] = "owi-v2.0.0-gpu-spa-2026-07-28"
+        config = load(tmp_path, data)
+        assert config.dataset.version == "owi-v2.0.0-gpu-spa-2026-07-28"
+
     def test_generation_section_is_optional_with_spec_defaults(self, tmp_path):
         data = base()
         del data["generation"]

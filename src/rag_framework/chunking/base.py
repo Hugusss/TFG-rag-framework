@@ -26,7 +26,8 @@ class Chunker(ABC):
       to ``rejections`` with a reason. A document that cannot
       participate in the strategy at all (e.g. missing the metadata the
       strategy requires) is rejected as a whole — one ``Rejection``
-      whose source is the document id — and is *not* counted in
+      whose source is the document id, counted in
+      ``documents_rejected`` — and is *not* counted in
       ``documents_without_chunks``. Counters reset per :meth:`split`
       call and are complete once the returned iterator is exhausted —
       one active split per instance at a time.
@@ -38,6 +39,7 @@ class Chunker(ABC):
     def __init__(self) -> None:
         self.documents_processed = 0
         self.documents_without_chunks = 0
+        self.documents_rejected = 0
         self.rejections: list[Rejection] = []
 
     @abstractmethod

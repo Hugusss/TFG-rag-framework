@@ -64,6 +64,7 @@ class PublisherOffsetsChunker(Chunker):
     def split(self, documents: Iterable[Document]) -> Iterator[Chunk]:
         self.documents_processed = 0
         self.documents_without_chunks = 0
+        self.documents_rejected = 0
         self.windows_clipped = 0
         self.rejections = []
         return self._iter_chunks(documents)
@@ -73,6 +74,7 @@ class PublisherOffsetsChunker(Chunker):
             self.documents_processed += 1
             offsets = document.metadata.get("chunk_offsets")
             if offsets is None:
+                self.documents_rejected += 1
                 self._reject(
                     document.document_id,
                     "document has no chunk_offsets metadata; this corpus"

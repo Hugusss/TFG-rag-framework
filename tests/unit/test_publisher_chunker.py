@@ -151,6 +151,7 @@ class TestAccounting:
         (rejection,) = chunker.rejections
         assert rejection.source == "doc1"
         assert "no chunk_offsets metadata" in rejection.reason
+        assert chunker.documents_rejected == 1
         assert chunker.documents_without_chunks == 0  # rejected, not zero-window
 
     def test_all_windows_rejected_counts_document_without_chunks(self):

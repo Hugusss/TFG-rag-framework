@@ -8,6 +8,7 @@
 dataset:
   loader: owi
   path: ./data/owi
+  version: owi-v2.0.0-gpu-spa-2026-07-28
 
 chunking:
   strategy: publisher_offsets

@@ -70,8 +70,13 @@ class _UniqueKeyLoader(yaml.SafeLoader):
 
 @dataclass(frozen=True, slots=True)
 class DatasetConfig:
+    """``version`` names the corpus for reproducibility (Rule 9), e.g.
+    ``owi-v2.0.0-gpu-spa-2026-07-28`` — the path alone is machine-local
+    and identifies nothing."""
+
     loader: str
     path: str
+    version: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,10 +175,11 @@ def _take(section: dict, key: str, expected: type, path: str, default=_MISSING):
 
 
 def _parse_dataset(section: dict) -> DatasetConfig:
-    _forbid_unknown(section, {"loader", "path"}, "dataset")
+    _forbid_unknown(section, {"loader", "path", "version"}, "dataset")
     return DatasetConfig(
         loader=_take(section, "loader", str, "dataset"),
         path=_take(section, "path", str, "dataset"),
+        version=_take(section, "version", str, "dataset", default=None),
     )
 
 
