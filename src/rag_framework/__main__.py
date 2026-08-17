@@ -10,6 +10,7 @@ import sys
 
 from rag_framework.config import ConfigError
 from rag_framework.embeddings.base import EmbeddingError
+from rag_framework.generation.base import GenerationError
 from rag_framework.loaders.base import LoaderError
 from rag_framework.metrics.manifest import (
     build_ingest_payload,
@@ -21,7 +22,13 @@ from rag_framework.vectorstores.base import VectorStoreError
 
 _logger = logging.getLogger("rag_framework")
 
-_USER_ERRORS = (ConfigError, LoaderError, EmbeddingError, VectorStoreError)
+_USER_ERRORS = (
+    ConfigError,
+    LoaderError,
+    EmbeddingError,
+    VectorStoreError,
+    GenerationError,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -77,6 +84,8 @@ def _query(
         snippet = " ".join(source.text.split())[:100]
         print(f"[{rank}] score={source.score:.4f}  doc={source.document_id[:16]}  {url}")
         print(f"    {snippet}")
+    if result.answer is not None:
+        print(f"\n{result.answer}\n")
     print(json.dumps(result.metrics, indent=2))
 
     payload = build_query_payload(pipeline, result)

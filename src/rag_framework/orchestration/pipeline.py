@@ -26,6 +26,8 @@ from rag_framework.config import ConfigError, PipelineConfig, load_config
 from rag_framework.embeddings.base import EmbeddingProvider
 from rag_framework.embeddings.local import LocalEmbeddingProvider
 from rag_framework.embeddings.precomputed import PrecomputedEmbeddingProvider
+from rag_framework.generation.base import Generator
+from rag_framework.generation.mock import MockGenerator
 from rag_framework.loaders.base import DocumentLoader
 from rag_framework.loaders.owi import OwiLoader
 from rag_framework.models import Chunk, IngestionReport, RAGResult
@@ -108,6 +110,18 @@ def build_vector_store(
     )
 
 
+def build_generator(config: PipelineConfig) -> Generator:
+    if config.generation.provider == "mock":
+        return MockGenerator()
+    # the real backend is deliberately deferred until the expected
+    # model is agreed (an embedding model cannot generate; a small
+    # CPU-runnable instruct model is the planned candidate)
+    raise ConfigError(
+        f"generation.provider: unknown provider"
+        f" '{config.generation.provider}' (known: mock)"
+    )
+
+
 def build_retriever(
     config: PipelineConfig,
     provider: EmbeddingProvider,
@@ -139,6 +153,10 @@ class RAGPipeline:
         self.retriever = build_retriever(
             config, self.embedding_provider, self.vector_store
         )
+        # built even when generation is disabled: an invalid provider
+        # name must fail at construction, not on the first generating
+        # query (fail-fast, ADR-004 boundary)
+        self.generator = build_generator(config)
         self.setup_seconds = round(time.perf_counter() - setup_start, 3)
         self.vectors_before: int | None = None
         self._collection_open = False
@@ -244,20 +262,14 @@ class RAGPipeline:
         *,
         retrieval_only: bool = False,
     ) -> RAGResult:
-        """Retrieve for ``question``.
+        """Retrieve — and, when enabled, generate — for ``question``.
 
         ``retrieval_only=True`` skips generation regardless of the
-        configuration (spec section 14); with it False and generation
-        enabled, this fails loudly until generation is implemented.
-        ``k`` defaults to ``retrieval.k``; caller-supplied values are
-        validated like the config would (a typo must not silently
-        change an experiment).
+        configuration (spec section 14). ``k`` defaults to
+        ``retrieval.k``; caller-supplied values are validated like the
+        config would (a typo must not silently change an experiment).
         """
-        if self.config.generation.enabled and not retrieval_only:
-            raise ConfigError(
-                "generation.enabled: generation is not implemented yet;"
-                " pass retrieval_only (--retrieval-only) or disable it"
-            )
+        generate = self.config.generation.enabled and not retrieval_only
         if k is None:
             k = self.config.retrieval.k
         elif k < 1:
@@ -267,27 +279,53 @@ class RAGPipeline:
                 self.config.vector_store.collection
             )
             self._collection_open = True
+        if self.vector_store.count() == 0:
+            # querying an empty collection is never a valid experiment;
+            # the classic cause is a typo'd collection name (which
+            # create_or_open would otherwise silently satisfy with a
+            # fresh empty collection and a success exit code)
+            raise ConfigError(
+                f"vector_store.collection: collection"
+                f" '{self.config.vector_store.collection}' is empty —"
+                " has ingest run, and is the name spelled exactly as"
+                " ingested?"
+            )
 
         total_start = time.perf_counter()
         sources = self.retriever.retrieve(question, k)
+        answer = None
+        generation_seconds = None
+        if generate:
+            start = time.perf_counter()
+            # context assembly (spec section 14) is the identity step
+            # here: the ranked SearchResults ARE the context; prompt
+            # construction happens inside the generator (Rule 2)
+            answer = self.generator.generate(question, sources)
+            generation_seconds = round(time.perf_counter() - start, 6)
         # stamp the request total before any bookkeeping calls: count()
         # is cheap locally but becomes a network round trip on a remote
         # store, and it must never pollute the section-12 request total
         total_seconds = round(time.perf_counter() - total_start, 6)
         timings = self.retriever.timings
+
+        def rounded(key):  # one rounding policy for every stage
+            value = timings.get(key)
+            return None if value is None else round(value, 6)
+
         metrics = {
             "k": k,
             "results_returned": len(sources),
             "collection_count": self.vector_store.count(),
-            "embed_seconds": timings.get("embed_seconds"),
-            "search_seconds": timings.get("search_seconds"),
-            "retrieval_seconds": timings.get("total_seconds"),
-            # equal to retrieval today; diverges once generation exists
-            # (spec section 12 requires the separation)
+            "embed_seconds": rounded("embed_seconds"),
+            "search_seconds": rounded("search_seconds"),
+            "retrieval_seconds": rounded("total_seconds"),
+            # generation reported separately so it can never hide
+            # retrieval behavior (spec section 12)
+            "generation_seconds": generation_seconds,
             "total_seconds": total_seconds,
         }
         return RAGResult(
-            query=question, answer=None, sources=sources, metrics=metrics
+            query=question, answer=answer, sources=sources, metrics=metrics
         )
 
 

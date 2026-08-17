@@ -153,6 +153,19 @@ class TestFactories:
         with pytest.raises(ConfigError, match="not implemented"):
             build_retriever(cfg, FAKE_PROVIDER, SimpleNamespace())
 
+    def test_mock_generator_builds(self):
+        from rag_framework.generation.mock import MockGenerator
+        from rag_framework.orchestration.pipeline import build_generator
+
+        assert isinstance(build_generator(config()), MockGenerator)
+
+    def test_unknown_generation_provider(self):
+        from rag_framework.orchestration.pipeline import build_generator
+
+        cfg = config(generation=GenerationConfig(enabled=True, provider="openai"))
+        with pytest.raises(ConfigError, match="known: mock"):
+            build_generator(cfg)
+
     def test_store_is_stamped_with_provider_identity(self, tmp_path):
         cfg = config(
             vector_store=VectorStoreConfig(

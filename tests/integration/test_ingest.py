@@ -232,7 +232,7 @@ def test_query_cli_end_to_end(tmp_path, capsys, monkeypatch):
     assert payload["manifest"]["dataset_version"]
 
 
-def test_query_with_generation_enabled_fails_loudly(tmp_path, monkeypatch, capsys):
+def test_query_with_mock_generation(tmp_path, monkeypatch, capsys):
     import yaml as yaml_module
 
     from rag_framework.orchestration import pipeline as pipeline_module
@@ -245,20 +245,124 @@ def test_query_with_generation_enabled_fails_loudly(tmp_path, monkeypatch, capsy
     data = yaml_module.safe_load(config_path.read_text())
     data["generation"] = {"enabled": True, "provider": "mock"}
     config_path.write_text(yaml_module.safe_dump(data), encoding="utf-8")
-
-    exit_code = main(
-        ["query", "--config", str(config_path), "--question", "q"]
-    )
-    assert exit_code == 1  # clean failure, not a traceback
-
-    # ...unless --retrieval-only overrides the config (spec section 14)
     assert main(["ingest", "--config", str(config_path)]) == 0
     capsys.readouterr()
+
+    exit_code = main(
+        ["query", "--config", str(config_path), "--question", "una pregunta"]
+    )
+    assert exit_code == 0
+    printed = capsys.readouterr().out
+    assert "[mock answer]" in printed
+
+    (report,) = (tmp_path / "results").glob("query-*.json")
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["answer"].startswith("[mock answer]")
+    assert payload["answer"].count("https://e.org/") == len(payload["sources"])
+    # generation latency reported separately from retrieval (section 12)
+    assert payload["metrics"]["generation_seconds"] >= 0
+    assert payload["metrics"]["total_seconds"] >= (
+        payload["metrics"]["retrieval_seconds"]
+        + payload["metrics"]["generation_seconds"]
+    )
+
+    # --retrieval-only still overrides generation (spec section 14)
     exit_code = main(
         ["query", "--config", str(config_path), "--question", "q",
          "--retrieval-only"]
     )
     assert exit_code == 0
+    reports = sorted((tmp_path / "results").glob("query-*.json"))
+    retrieval_only = json.loads(reports[-1].read_text(encoding="utf-8"))
+    assert retrieval_only["answer"] is None
+    assert retrieval_only["metrics"]["generation_seconds"] is None
+
+    # an unknown generation provider still fails at construction
+    data["generation"] = {"enabled": True, "provider": "llm"}
+    config_path.write_text(yaml_module.safe_dump(data), encoding="utf-8")
+    assert main(
+        ["query", "--config", str(config_path), "--question", "q"]
+    ) == 1
+
+
+def test_query_without_generation_section_stays_retrieval_only(
+    tmp_path, monkeypatch, capsys
+):
+    # the config-default path (no generation section, no flag) must
+    # behave exactly like retrieval-only: answer null, timing null
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    write_corpus(tmp_path / "corpus")
+    config_path = write_config(tmp_path)
+    assert main(["ingest", "--config", str(config_path)]) == 0
+    capsys.readouterr()
+    assert main(
+        ["query", "--config", str(config_path), "--question", "q"]
+    ) == 0
+    (report,) = (tmp_path / "results").glob("query-*.json")
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["answer"] is None
+    assert payload["metrics"]["generation_seconds"] is None
+
+
+def test_generation_failure_is_a_clean_cli_error(tmp_path, monkeypatch, capsys):
+    import yaml as yaml_module
+
+    from rag_framework.generation.base import GenerationError
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    class BrokenGenerator:
+        def generate(self, query, context):
+            raise GenerationError("model timed out")
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    monkeypatch.setattr(
+        pipeline_module, "build_generator", lambda config: BrokenGenerator()
+    )
+    write_corpus(tmp_path / "corpus")
+    config_path = write_config(tmp_path)
+    data = yaml_module.safe_load(config_path.read_text())
+    data["generation"] = {"enabled": True, "provider": "mock"}
+    config_path.write_text(yaml_module.safe_dump(data), encoding="utf-8")
+    assert main(["ingest", "--config", str(config_path)]) == 0
+    capsys.readouterr()
+
+    exit_code = main(
+        ["query", "--config", str(config_path), "--question", "q"]
+    )
+    assert exit_code == 1  # message, never a traceback (section 22)
+
+
+def test_query_against_missing_collection_fails_loudly(
+    tmp_path, monkeypatch, capsys
+):
+    import yaml as yaml_module
+
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    write_corpus(tmp_path / "corpus")
+    config_path = write_config(tmp_path)
+    assert main(["ingest", "--config", str(config_path)]) == 0
+    capsys.readouterr()
+
+    # a typo'd collection name must never silently run an empty
+    # experiment with a success exit code
+    data = yaml_module.safe_load(config_path.read_text())
+    data["vector_store"]["collection"] = "test-col-typo"
+    config_path.write_text(yaml_module.safe_dump(data), encoding="utf-8")
+    exit_code = main(
+        ["query", "--config", str(config_path), "--question", "q"]
+    )
+    assert exit_code == 1
+    assert not list((tmp_path / "results").glob("query-*.json"))
 
 
 def test_query_k_zero_rejected_like_config_would(tmp_path, monkeypatch, capsys):
