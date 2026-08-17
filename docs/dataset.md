@@ -90,6 +90,18 @@ uncovered tails cannot be found by dense retrieval over the official
 vectors. This is a property of the published dataset, not of this
 pipeline; any retrieval-quality analysis must account for it.
 
+The cap is **universal across the OWI embeddings line**, not a quirk of
+this slice (verified 2026-08-17 by reading `chunk_offsets` from the raw
+records files): the 2026-03-13 v0.3.0 slice (57,072 documents, 169,677
+chunks) maxes at 5 windows with 27% of documents at the cap, and the
+German partition of 2026-08-08 (16,692 documents) shows the same
+maximum and a matching distribution shape. It spans schema versions,
+months, and languages — a constant of the publisher's embedding
+pipeline. Pulling a newer or different-language dataset therefore
+cannot remove it; full-text coverage requires computing embeddings
+locally (the `recursive` chunking strategy with the `local` embedding
+provider).
+
 ## 6. Known quirks and parsing hazards
 
 Each hazard below is handled by a documented pipeline policy; none is
@@ -138,6 +150,13 @@ Publication cadence (checked 2026-08-12): near-daily `gpu.owie` datasets
 from it4i since 2026-07-28, 210k–1.2M records per day across all
 languages. Occasional zero-byte orphan catalogue entries exist (e.g. two
 on 2026-07-31); verify record counts after pulling.
+
+**Official embeddings exist only for the `gpu` collection** (verified
+over 30 days of it4i publications, 2026-08-17: `gpu.owie` is the sole
+`owie` resource; `main`, `legal`, `curlie_full`, and `licenses` publish
+text-only `owi` datasets). RAG over any other collection would require
+locally computed embeddings and a loader for the manifest-less text
+format.
 
 ## 8. Access and parsing problems encountered
 
