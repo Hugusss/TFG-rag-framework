@@ -59,7 +59,11 @@ class PrecomputedEmbeddingProvider(EmbeddingProvider):
         self.normalized = True  # v2.0.0 corpus contract: unit vectors
         self.device = "none"  # vectors are read, never computed here
         self._query_encoder_factory = query_encoder_factory
-        self._query_encoder = None
+        # public once built: the provider that actually encodes queries,
+        # so reports can attribute query vectors to the encoder that
+        # produced them (its device and resolved model revision differ
+        # from this provider's)
+        self.query_encoder: EmbeddingProvider | None = None
         root = Path(source)
         files = sorted(
             path
@@ -171,7 +175,7 @@ class PrecomputedEmbeddingProvider(EmbeddingProvider):
                 "no query encoder configured: this provider serves"
                 " precomputed document vectors only"
             )
-        if self._query_encoder is None:
+        if self.query_encoder is None:
             encoder = self._query_encoder_factory()
             if encoder.model_id != self.model_id:
                 raise EmbeddingError(
@@ -185,8 +189,8 @@ class PrecomputedEmbeddingProvider(EmbeddingProvider):
                     f" does not match the corpus vectors"
                     f" ({self.normalized}): scores would be incomparable"
                 )
-            self._query_encoder = encoder
-        vector = self._query_encoder.embed_query(text)
+            self.query_encoder = encoder
+        vector = self.query_encoder.embed_query(text)
         if len(vector) != self.dimension:
             raise EmbeddingError(
                 f"query vector dimension {len(vector)} does not match"

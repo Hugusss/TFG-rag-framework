@@ -132,6 +132,27 @@ class TestFactories:
         with pytest.raises(ConfigError, match="known: chroma"):
             build_vector_store(cfg, FAKE_PROVIDER)
 
+    def test_sequential_mode_builds_sequential_retriever(self, tmp_path):
+        from types import SimpleNamespace
+
+        from rag_framework.orchestration.pipeline import build_retriever
+        from rag_framework.retrieval.sequential import SequentialRetriever
+
+        cfg = config()
+        retriever = build_retriever(cfg, FAKE_PROVIDER, SimpleNamespace())
+        assert isinstance(retriever, SequentialRetriever)
+
+    def test_collective_mode_not_implemented_yet(self):
+        from types import SimpleNamespace
+
+        from rag_framework.orchestration.pipeline import build_retriever
+
+        cfg = config(
+            retrieval=RetrievalConfig(mode="collective", partitions=4, workers=4)
+        )
+        with pytest.raises(ConfigError, match="not implemented"):
+            build_retriever(cfg, FAKE_PROVIDER, SimpleNamespace())
+
     def test_store_is_stamped_with_provider_identity(self, tmp_path):
         cfg = config(
             vector_store=VectorStoreConfig(

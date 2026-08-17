@@ -150,3 +150,56 @@ def build_ingest_payload(pipeline, report) -> dict:
 
 
 _REJECTION_SAMPLE = 20  # full detail is in the logs; reports carry a sample
+
+
+def build_query_payload(pipeline, result) -> dict:
+    """The complete query result payload (spec section 22 query log).
+
+    ``result`` is a RAGResult; sources are recorded as compact rows
+    (ids, score, provenance) — full texts live in the store, not in
+    every report. Deferred section-22 fields until the benchmark
+    runner exists: experiment id and query id (single ad-hoc queries
+    have neither); failed queries write no report — failures live in
+    logs and exit codes.
+
+    ``query_encoder`` records the provider that actually encoded the
+    query vector (for the precomputed provider that is its live
+    delegate, whose device and resolved model revision differ from the
+    corpus vectors') — the attribution ADR-009's unpinned revision
+    depends on.
+    """
+    provider = pipeline.embedding_provider
+    encoder = getattr(provider, "query_encoder", None) or provider
+    return {
+        "query": result.query,
+        "retrieval_mode": pipeline.config.retrieval.mode,
+        "collection": pipeline.config.vector_store.collection,
+        "metrics": result.metrics,
+        "answer": result.answer,
+        "sources": [
+            {
+                "rank": rank,
+                "score": source.score,
+                "chunk_id": source.chunk_id,
+                "document_id": source.document_id,
+                "url": source.metadata.get("url"),
+                "position": source.metadata.get("position"),
+            }
+            for rank, source in enumerate(result.sources, start=1)
+        ],
+        "embedding_identity": {
+            "model_id": provider.model_id,
+            "dimension": provider.dimension,
+            "normalized": provider.normalized,
+            "device": provider.device,
+            "revision": getattr(provider, "revision", None),
+        },
+        "query_encoder": {
+            "model_id": encoder.model_id,
+            "device": encoder.device,
+            "revision": getattr(encoder, "revision", None),
+        },
+        "warm_up_policy": "none",
+        "repetitions": 1,
+        "manifest": run_manifest(pipeline.config),
+    }

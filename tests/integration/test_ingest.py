@@ -180,6 +180,102 @@ def test_cli_config_error_is_a_clean_failure(tmp_path, capsys):
     assert exit_code == 1
 
 
+class StubQueryEncoder:
+    """Stands in for LocalEmbeddingProvider: same constructor shape,
+    fixed vector aimed at chunk ("aaa", 0) of the fixture corpus."""
+
+    def __init__(self, model_id, batch_size=None):
+        self.model_id = model_id
+        self.normalized = True
+        self.device = "stub"
+        self.batch_size = batch_size
+
+    def embed_query(self, text):
+        return VECTORS[("aaa", 0)]
+
+
+def test_query_cli_end_to_end(tmp_path, capsys, monkeypatch):
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    write_corpus(tmp_path / "corpus")
+    config_path = write_config(tmp_path)
+    assert main(["ingest", "--config", str(config_path)]) == 0
+    capsys.readouterr()
+
+    exit_code = main(
+        ["query", "--config", str(config_path), "--question", "una pregunta",
+         "--retrieval-only", "--k", "2"]
+    )
+    assert exit_code == 0
+    printed = capsys.readouterr().out
+    assert "[1] score=1.0000" in printed
+    assert "https://e.org/aaa" in printed
+
+    (report,) = (tmp_path / "results").glob("query-*.json")
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["query"] == "una pregunta"
+    assert payload["retrieval_mode"] == "sequential"
+    assert payload["sources"][0]["document_id"] == "aaa"
+    assert payload["sources"][0]["rank"] == 1
+    assert payload["metrics"]["results_returned"] == 2
+    assert payload["metrics"]["embed_seconds"] >= 0
+    assert payload["metrics"]["search_seconds"] >= 0
+    # the spec section-12 retrieval/generation separation keys
+    assert payload["metrics"]["total_seconds"] >= payload["metrics"]["retrieval_seconds"]
+    assert payload["answer"] is None
+    # query vectors are attributed to the encoder that produced them
+    assert payload["query_encoder"]["device"] == "stub"
+    assert payload["embedding_identity"]["device"] == "none"
+    assert payload["manifest"]["dataset_version"]
+
+
+def test_query_with_generation_enabled_fails_loudly(tmp_path, monkeypatch, capsys):
+    import yaml as yaml_module
+
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    write_corpus(tmp_path / "corpus")
+    config_path = write_config(tmp_path)
+    data = yaml_module.safe_load(config_path.read_text())
+    data["generation"] = {"enabled": True, "provider": "mock"}
+    config_path.write_text(yaml_module.safe_dump(data), encoding="utf-8")
+
+    exit_code = main(
+        ["query", "--config", str(config_path), "--question", "q"]
+    )
+    assert exit_code == 1  # clean failure, not a traceback
+
+    # ...unless --retrieval-only overrides the config (spec section 14)
+    assert main(["ingest", "--config", str(config_path)]) == 0
+    capsys.readouterr()
+    exit_code = main(
+        ["query", "--config", str(config_path), "--question", "q",
+         "--retrieval-only"]
+    )
+    assert exit_code == 0
+
+
+def test_query_k_zero_rejected_like_config_would(tmp_path, monkeypatch, capsys):
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    write_corpus(tmp_path / "corpus")
+    config_path = write_config(tmp_path)
+    exit_code = main(
+        ["query", "--config", str(config_path), "--question", "q", "--k", "0"]
+    )
+    assert exit_code == 1  # a typo must not silently run an empty experiment
+    assert not list((tmp_path / "results").glob("query-*.json"))
+
+
 def test_report_write_failure_keeps_the_metrics(tmp_path, capsys):
     # an unwritable metrics dir must not cost the run its numbers: the
     # report is printed first, and the failure is a clean exit 3

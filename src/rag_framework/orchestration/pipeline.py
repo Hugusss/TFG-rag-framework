@@ -28,7 +28,9 @@ from rag_framework.embeddings.local import LocalEmbeddingProvider
 from rag_framework.embeddings.precomputed import PrecomputedEmbeddingProvider
 from rag_framework.loaders.base import DocumentLoader
 from rag_framework.loaders.owi import OwiLoader
-from rag_framework.models import Chunk, IngestionReport
+from rag_framework.models import Chunk, IngestionReport, RAGResult
+from rag_framework.retrieval.base import Retriever
+from rag_framework.retrieval.sequential import SequentialRetriever
 from rag_framework.vectorstores.base import VectorStore
 from rag_framework.vectorstores.chroma import ChromaVectorStore
 
@@ -106,6 +108,21 @@ def build_vector_store(
     )
 
 
+def build_retriever(
+    config: PipelineConfig,
+    provider: EmbeddingProvider,
+    store: VectorStore,
+) -> Retriever:
+    if config.retrieval.mode == "sequential":
+        return SequentialRetriever(provider, store)
+    # config already guarantees the mode is a known name; collective
+    # arrives with the Week-3 increments
+    raise ConfigError(
+        f"retrieval.mode: '{config.retrieval.mode}' is not implemented"
+        " yet (implemented: sequential)"
+    )
+
+
 class RAGPipeline:
     """The application-level pipeline, built entirely from config."""
 
@@ -119,8 +136,12 @@ class RAGPipeline:
         self.chunker = build_chunker(config)
         self.embedding_provider = build_embedding_provider(config)
         self.vector_store = build_vector_store(config, self.embedding_provider)
+        self.retriever = build_retriever(
+            config, self.embedding_provider, self.vector_store
+        )
         self.setup_seconds = round(time.perf_counter() - setup_start, 3)
         self.vectors_before: int | None = None
+        self._collection_open = False
 
     @classmethod
     def from_config(cls, path: str | Path) -> "RAGPipeline":
@@ -139,6 +160,7 @@ class RAGPipeline:
         total_start = time.perf_counter()
 
         self.vector_store.create_or_open(self.config.vector_store.collection)
+        self._collection_open = True
         # makes idempotence auditable from the report payload alone
         self.vectors_before = self.vector_store.count()
 
@@ -215,10 +237,57 @@ class RAGPipeline:
             )
         return report
 
-    def query(self, question: str, k: int = 10):
-        raise NotImplementedError(
-            "retrieval lands with the Week-2 increments; the pipeline is"
-            " ingest-only for now"
+    def query(
+        self,
+        question: str,
+        k: int | None = None,
+        *,
+        retrieval_only: bool = False,
+    ) -> RAGResult:
+        """Retrieve for ``question``.
+
+        ``retrieval_only=True`` skips generation regardless of the
+        configuration (spec section 14); with it False and generation
+        enabled, this fails loudly until generation is implemented.
+        ``k`` defaults to ``retrieval.k``; caller-supplied values are
+        validated like the config would (a typo must not silently
+        change an experiment).
+        """
+        if self.config.generation.enabled and not retrieval_only:
+            raise ConfigError(
+                "generation.enabled: generation is not implemented yet;"
+                " pass retrieval_only (--retrieval-only) or disable it"
+            )
+        if k is None:
+            k = self.config.retrieval.k
+        elif k < 1:
+            raise ConfigError(f"k: must be positive, got {k}")
+        if not self._collection_open:
+            self.vector_store.create_or_open(
+                self.config.vector_store.collection
+            )
+            self._collection_open = True
+
+        total_start = time.perf_counter()
+        sources = self.retriever.retrieve(question, k)
+        # stamp the request total before any bookkeeping calls: count()
+        # is cheap locally but becomes a network round trip on a remote
+        # store, and it must never pollute the section-12 request total
+        total_seconds = round(time.perf_counter() - total_start, 6)
+        timings = self.retriever.timings
+        metrics = {
+            "k": k,
+            "results_returned": len(sources),
+            "collection_count": self.vector_store.count(),
+            "embed_seconds": timings.get("embed_seconds"),
+            "search_seconds": timings.get("search_seconds"),
+            "retrieval_seconds": timings.get("total_seconds"),
+            # equal to retrieval today; diverges once generation exists
+            # (spec section 12 requires the separation)
+            "total_seconds": total_seconds,
+        }
+        return RAGResult(
+            query=question, answer=None, sources=sources, metrics=metrics
         )
 
 

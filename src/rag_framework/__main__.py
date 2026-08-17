@@ -11,11 +11,17 @@ import sys
 from rag_framework.config import ConfigError
 from rag_framework.embeddings.base import EmbeddingError
 from rag_framework.loaders.base import LoaderError
-from rag_framework.metrics.manifest import build_ingest_payload, write_report
+from rag_framework.metrics.manifest import (
+    build_ingest_payload,
+    build_query_payload,
+    write_report,
+)
 from rag_framework.orchestration.pipeline import RAGPipeline
 from rag_framework.vectorstores.base import VectorStoreError
 
 _logger = logging.getLogger("rag_framework")
+
+_USER_ERRORS = (ConfigError, LoaderError, EmbeddingError, VectorStoreError)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,6 +34,19 @@ def main(argv: list[str] | None = None) -> int:
         "ingest", help="ingest the configured dataset into the vector store"
     )
     ingest.add_argument("--config", required=True, help="pipeline YAML file")
+    query = subcommands.add_parser(
+        "query", help="retrieve top-k chunks for a question"
+    )
+    query.add_argument("--config", required=True, help="pipeline YAML file")
+    query.add_argument("--question", required=True, help="query text")
+    query.add_argument(
+        "--k", type=int, default=None, help="results (default: retrieval.k)"
+    )
+    query.add_argument(
+        "--retrieval-only",
+        action="store_true",
+        help="skip generation even if the configuration enables it",
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -37,15 +56,47 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "ingest":
         return _ingest(args.config)
+    if args.command == "query":
+        return _query(args.config, args.question, args.k, args.retrieval_only)
     parser.error(f"unknown command {args.command!r}")
     return 2
+
+
+def _query(
+    config_path: str, question: str, k: int | None, retrieval_only: bool
+) -> int:
+    try:
+        pipeline = RAGPipeline.from_config(config_path)
+        result = pipeline.query(question, k=k, retrieval_only=retrieval_only)
+    except _USER_ERRORS as error:
+        _logger.error("%s", error)
+        return 1
+
+    for rank, source in enumerate(result.sources, start=1):
+        url = source.metadata.get("url", "")
+        snippet = " ".join(source.text.split())[:100]
+        print(f"[{rank}] score={source.score:.4f}  doc={source.document_id[:16]}  {url}")
+        print(f"    {snippet}")
+    print(json.dumps(result.metrics, indent=2))
+
+    payload = build_query_payload(pipeline, result)
+    try:
+        path = write_report(payload, pipeline.config.metrics.output, "query")
+    except OSError as error:
+        _logger.error(
+            "query succeeded but the report file could not be written: %s",
+            error,
+        )
+        return 3
+    print(f"report written to {path}")
+    return 0
 
 
 def _ingest(config_path: str) -> int:
     try:
         pipeline = RAGPipeline.from_config(config_path)
         report = pipeline.ingest()
-    except (ConfigError, LoaderError, EmbeddingError, VectorStoreError) as error:
+    except _USER_ERRORS as error:
         # a user-fixable failure gets a message, never a traceback
         _logger.error("%s", error)
         return 1
