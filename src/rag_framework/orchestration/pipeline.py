@@ -24,6 +24,7 @@ from rag_framework.chunking.base import Chunker
 from rag_framework.chunking.publisher_offsets import PublisherOffsetsChunker
 from rag_framework.config import ConfigError, PipelineConfig, load_config
 from rag_framework.embeddings.base import EmbeddingProvider
+from rag_framework.embeddings.local import LocalEmbeddingProvider
 from rag_framework.embeddings.precomputed import PrecomputedEmbeddingProvider
 from rag_framework.loaders.base import DocumentLoader
 from rag_framework.loaders.owi import OwiLoader
@@ -57,13 +58,32 @@ def build_chunker(config: PipelineConfig) -> Chunker:
 
 
 def build_embedding_provider(config: PipelineConfig) -> EmbeddingProvider:
-    if config.embedding.provider == "precomputed":
-        return PrecomputedEmbeddingProvider(
-            config.dataset.path, model_id=config.embedding.model
+    if config.embedding.normalize is False:
+        # a config knob that silently does nothing would lie in every
+        # result file: both implemented providers normalize, because
+        # the corpus vectors and the reference recipe do
+        raise ConfigError(
+            "embedding.normalize: only true is supported — the official"
+            " corpus vectors and the reference encoding recipe are"
+            " normalized"
         )
+    model_id = config.embedding.model
+    batch_size = config.embedding.batch_size
+    if config.embedding.provider == "precomputed":
+        # queries are encoded live with the same model as the corpus
+        # vectors; the delegate is built on first query, never at ingest
+        return PrecomputedEmbeddingProvider(
+            config.dataset.path,
+            model_id=model_id,
+            query_encoder_factory=lambda: LocalEmbeddingProvider(
+                model_id, batch_size=batch_size
+            ),
+        )
+    if config.embedding.provider == "local":
+        return LocalEmbeddingProvider(model_id, batch_size=batch_size)
     raise ConfigError(
         f"embedding.provider: unknown provider"
-        f" '{config.embedding.provider}' (known: precomputed)"
+        f" '{config.embedding.provider}' (known: precomputed, local)"
     )
 
 

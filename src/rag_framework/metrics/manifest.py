@@ -21,7 +21,15 @@ from pathlib import Path
 from rag_framework import __version__
 from rag_framework.config import PipelineConfig
 
-_DEPENDENCIES = ("chromadb", "pyarrow", "pyyaml")
+_DEPENDENCIES = (
+    "chromadb",
+    "pyarrow",
+    "pyyaml",
+    "sentence-transformers",
+    "transformers",
+    "torch",
+    "peft",
+)
 
 
 def _git(*args: str) -> str | None:
@@ -109,11 +117,19 @@ def build_ingest_payload(pipeline, report) -> dict:
     orchestration import).
     """
     loader, chunker = pipeline.loader, pipeline.chunker
+    provider = pipeline.embedding_provider
     sample = _REJECTION_SAMPLE
     return {
         "report": dataclasses.asdict(report),
         "details": {
             "pipeline_setup_seconds": pipeline.setup_seconds,
+            "embedding_identity": {
+                "model_id": provider.model_id,
+                "dimension": provider.dimension,
+                "normalized": provider.normalized,
+                "device": provider.device,
+                "revision": getattr(provider, "revision", None),
+            },
             "vectors_before_run": pipeline.vectors_before,
             "loader_rejections": len(loader.rejections),
             "loader_rejection_sample": [

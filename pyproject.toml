@@ -15,6 +15,8 @@ dependencies = [
     "pyyaml>=6,<7",      # config seam
     "pyarrow>=25,<26",   # owi loader seam
     "chromadb>=1.5,<1.6",  # chroma vector-store seam; pinned minor (behavior drift risk), exact version in run manifests
+    "sentence-transformers>=5,<6",  # live jina-v5 encoder (embeddings seam)
+    "peft>=0.17,<1",     # required by the jina-v5 model code (ADR-009)
 ]
 
 [project.optional-dependencies]

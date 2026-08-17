@@ -76,9 +76,52 @@ class TestFactories:
             build_chunker(cfg)
 
     def test_unknown_embedding_provider(self):
-        cfg = config(embedding=EmbeddingConfig(provider="local", model="m"))
-        with pytest.raises(ConfigError, match="known: precomputed"):
+        cfg = config(embedding=EmbeddingConfig(provider="openai", model="m"))
+        with pytest.raises(ConfigError, match="known: precomputed, local"):
             build_embedding_provider(cfg)
+
+    def test_local_provider_builds_without_loading_a_model(self):
+        from rag_framework.embeddings.local import LocalEmbeddingProvider
+
+        cfg = config(embedding=EmbeddingConfig(provider="local", model="m"))
+        provider = build_embedding_provider(cfg)
+        assert isinstance(provider, LocalEmbeddingProvider)
+        assert provider.model_id == "m"
+
+    def test_normalize_false_is_rejected_loudly(self):
+        cfg = config(
+            embedding=EmbeddingConfig(provider="local", model="m", normalize=False)
+        )
+        with pytest.raises(ConfigError, match="normalize"):
+            build_embedding_provider(cfg)
+
+    def test_precomputed_branch_wires_a_matching_query_delegate(self, monkeypatch):
+        # the one guarantee that config.model reaches BOTH halves of the
+        # split provider — captured without parquet or a real model
+        from rag_framework.embeddings.local import LocalEmbeddingProvider
+        from rag_framework.orchestration import pipeline as pipeline_module
+
+        captured = {}
+
+        class Recorder:
+            def __init__(self, source, *, model_id, query_encoder_factory):
+                captured["model_id"] = model_id
+                captured["factory"] = query_encoder_factory
+
+        monkeypatch.setattr(
+            pipeline_module, "PrecomputedEmbeddingProvider", Recorder
+        )
+        cfg = config(
+            embedding=EmbeddingConfig(
+                provider="precomputed", model="m", batch_size=64
+            )
+        )
+        build_embedding_provider(cfg)
+        assert captured["model_id"] == "m"
+        delegate = captured["factory"]()
+        assert isinstance(delegate, LocalEmbeddingProvider)
+        assert delegate.model_id == "m"
+        assert delegate.batch_size == 64
 
     def test_unknown_store_type(self):
         cfg = config(

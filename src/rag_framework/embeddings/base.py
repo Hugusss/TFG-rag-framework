@@ -43,14 +43,17 @@ class EmbeddingProvider(ABC):
     - Deterministic: the same inputs produce the same vectors.
     - The embedding identity is machine-readable: ``model_id``,
       ``dimension``, and ``normalized`` describe the embedding space,
-      so the vector-store layer can stamp collection names/metadata and
-      result files can carry the spec-section-10 record without any
-      component hardcoding model facts outside this seam.
+      and ``device`` records where encoding executes (space-independent,
+      but required for the spec-section-10 run record — latencies are
+      meaningless without it). The vector-store layer stamps collection
+      metadata and result files carry the record without any component
+      hardcoding model facts outside this seam.
     """
 
     model_id: str
     dimension: int
     normalized: bool
+    device: str
 
     @abstractmethod
     def embed_documents(self, chunks: list[Chunk]) -> list[list[float]]:

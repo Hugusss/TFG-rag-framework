@@ -17,10 +17,13 @@ A chunk without its vector raises :class:`EmbeddingError`, never a
 quiet re-encode: a miss means the chunker and the vector table disagree
 about the corpus, and continuing would invalidate the experiment.
 
-``embed_query`` is not yet available here: encoding queries requires
-the live jina-v5 encoder, which lands with the retrieval increment
-(Week 2). Ingestion never embeds queries, so the Week-1 gate does not
-need it — a deliberate scope reduction (Rule 10), loud when hit.
+``embed_query`` delegates to a lazily built live encoder (the plan's
+design: document vectors from the official parquet, query vectors from
+the live model). The delegate is constructed on first query — never at
+pipeline construction, so ingestion pays no model-load cost — and must
+declare the same ``model_id`` as the corpus vectors: one collection,
+one embedding space (spec section 10). Without a configured delegate,
+``embed_query`` stays loudly unavailable.
 """
 
 from __future__ import annotations
@@ -42,9 +45,21 @@ _COLUMNS = ["record_id", "chunk_idx", "embedding"]
 class PrecomputedEmbeddingProvider(EmbeddingProvider):
     """Serves official corpus vectors by (document_id, position)."""
 
-    def __init__(self, source: str | Path, *, model_id: str) -> None:
+    def __init__(
+        self,
+        source: str | Path,
+        *,
+        model_id: str,
+        query_encoder_factory=None,
+    ) -> None:
+        """``query_encoder_factory`` is a zero-argument callable
+        returning an EmbeddingProvider for query encoding (built on
+        first query, so ingest never pays for it)."""
         self.model_id = model_id
         self.normalized = True  # v2.0.0 corpus contract: unit vectors
+        self.device = "none"  # vectors are read, never computed here
+        self._query_encoder_factory = query_encoder_factory
+        self._query_encoder = None
         root = Path(source)
         files = sorted(
             path
@@ -151,7 +166,30 @@ class PrecomputedEmbeddingProvider(EmbeddingProvider):
         return vectors
 
     def embed_query(self, text: str) -> list[float]:
-        raise NotImplementedError(
-            "query encoding requires the live jina-v5 encoder and lands"
-            " with the retrieval increment; ingestion never embeds queries"
-        )
+        if self._query_encoder_factory is None:
+            raise NotImplementedError(
+                "no query encoder configured: this provider serves"
+                " precomputed document vectors only"
+            )
+        if self._query_encoder is None:
+            encoder = self._query_encoder_factory()
+            if encoder.model_id != self.model_id:
+                raise EmbeddingError(
+                    f"query encoder model '{encoder.model_id}' does not"
+                    f" match the corpus vectors' model '{self.model_id}':"
+                    " refusing to mix embedding spaces"
+                )
+            if encoder.normalized != self.normalized:
+                raise EmbeddingError(
+                    f"query encoder normalization ({encoder.normalized})"
+                    f" does not match the corpus vectors"
+                    f" ({self.normalized}): scores would be incomparable"
+                )
+            self._query_encoder = encoder
+        vector = self._query_encoder.embed_query(text)
+        if len(vector) != self.dimension:
+            raise EmbeddingError(
+                f"query vector dimension {len(vector)} does not match"
+                f" the corpus dimension {self.dimension}"
+            )
+        return vector

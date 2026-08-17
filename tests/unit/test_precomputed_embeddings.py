@@ -146,9 +146,9 @@ class TestFailures:
         with pytest.raises(EmbeddingError, match="missing required column"):
             provider_for(tmp_path)
 
-    def test_embed_query_is_explicitly_unavailable(self, tmp_path):
+    def test_embed_query_unavailable_without_a_delegate(self, tmp_path):
         provider = standard_corpus(tmp_path)
-        with pytest.raises(NotImplementedError, match="retrieval increment"):
+        with pytest.raises(NotImplementedError, match="no query encoder"):
             provider.embed_query("una consulta")
 
     def test_null_vector_rejected_at_init(self, tmp_path):
@@ -203,3 +203,64 @@ class TestFailures:
         (directory / "metadata_0_embeddings.parquet").write_bytes(b"not parquet")
         with pytest.raises(EmbeddingError, match="unreadable"):
             provider_for(tmp_path)
+
+
+class StubQueryEncoder:
+    def __init__(self, model_id="test-model", dimension=4, normalized=True):
+        self.model_id = model_id
+        self.normalized = normalized
+        self.device = "cpu"
+        self._dimension = dimension
+        self.queries = []
+
+    def embed_query(self, text):
+        self.queries.append(text)
+        return [0.5] * self._dimension
+
+
+class TestQueryDelegation:
+    def test_delegate_built_lazily_and_reused(self, tmp_path):
+        built = []
+
+        def factory():
+            built.append(True)
+            return StubQueryEncoder()
+
+        write_embeddings(tmp_path, [("aaa", 0, VEC_A0)])
+        provider = PrecomputedEmbeddingProvider(
+            tmp_path, model_id="test-model", query_encoder_factory=factory
+        )
+        assert built == []  # ingest-time cost: zero
+        assert provider.embed_query("q1") == [0.5] * 4
+        provider.embed_query("q2")
+        assert built == [True]
+
+    def test_mismatched_delegate_model_refused(self, tmp_path):
+        write_embeddings(tmp_path, [("aaa", 0, VEC_A0)])
+        provider = PrecomputedEmbeddingProvider(
+            tmp_path,
+            model_id="corpus-model",
+            query_encoder_factory=lambda: StubQueryEncoder("other-model"),
+        )
+        with pytest.raises(EmbeddingError, match="refusing to mix"):
+            provider.embed_query("q")
+
+    def test_mismatched_delegate_normalization_refused(self, tmp_path):
+        write_embeddings(tmp_path, [("aaa", 0, VEC_A0)])
+        provider = PrecomputedEmbeddingProvider(
+            tmp_path,
+            model_id="test-model",
+            query_encoder_factory=lambda: StubQueryEncoder(normalized=False),
+        )
+        with pytest.raises(EmbeddingError, match="normalization"):
+            provider.embed_query("q")
+
+    def test_mismatched_query_dimension_refused(self, tmp_path):
+        write_embeddings(tmp_path, [("aaa", 0, VEC_A0)])
+        provider = PrecomputedEmbeddingProvider(
+            tmp_path,
+            model_id="test-model",
+            query_encoder_factory=lambda: StubQueryEncoder(dimension=3),
+        )
+        with pytest.raises(EmbeddingError, match="dimension 3"):
+            provider.embed_query("q")
