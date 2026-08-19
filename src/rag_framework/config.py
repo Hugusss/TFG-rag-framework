@@ -12,7 +12,11 @@ Validation boundaries — what is checked where:
 - **Here**: structure and topology. Every key exists with the right type,
   and value-dependent shapes are coherent: ``chunking.strategy:
   publisher_offsets`` admits no token sizes, ``retrieval.mode:
-  sequential`` admits only one partition and one worker.
+  sequential`` admits only one partition and one worker. Coherence
+  *across* seams (e.g. a chunking strategy incompatible with an
+  embedding provider) is adapter semantics, not config topology — it
+  is checked at the wiring point (pipeline construction), still before
+  any work runs.
 - **Component factories** (later increments): whether a component name
   such as ``dataset.loader: owi`` or ``vector_store.type: chroma`` is
   registered. Names are open sets that grow with adapters; their shape

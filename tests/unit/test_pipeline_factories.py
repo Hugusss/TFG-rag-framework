@@ -63,7 +63,9 @@ class TestFactories:
         with pytest.raises(ConfigError, match="known: owi"):
             build_loader(cfg)
 
-    def test_recursive_strategy_not_implemented_yet(self):
+    def test_recursive_strategy_builds_with_config_parameters(self):
+        from rag_framework.chunking.recursive import RecursiveChunker
+
         cfg = config(
             chunking=ChunkingConfig(
                 strategy="recursive",
@@ -72,8 +74,23 @@ class TestFactories:
                 minimum_tokens=50,
             )
         )
-        with pytest.raises(ConfigError, match="not.*implemented"):
-            build_chunker(cfg)
+        chunker = build_chunker(cfg)
+        assert isinstance(chunker, RecursiveChunker)
+        assert chunker._target == 500 and chunker._overlap == 50
+
+    def test_recursive_with_precomputed_provider_refused_at_build(self, tmp_path):
+        from rag_framework.orchestration.pipeline import RAGPipeline
+
+        cfg = config(
+            chunking=ChunkingConfig(
+                strategy="recursive",
+                target_tokens=500,
+                overlap_tokens=50,
+                minimum_tokens=50,
+            )
+        )
+        with pytest.raises(ConfigError, match="cannot be combined"):
+            RAGPipeline(cfg)
 
     def test_unknown_embedding_provider(self):
         cfg = config(embedding=EmbeddingConfig(provider="openai", model="m"))

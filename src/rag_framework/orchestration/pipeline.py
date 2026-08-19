@@ -22,6 +22,7 @@ from pathlib import Path
 from rag_framework import __version__
 from rag_framework.chunking.base import Chunker
 from rag_framework.chunking.publisher_offsets import PublisherOffsetsChunker
+from rag_framework.chunking.recursive import RecursiveChunker
 from rag_framework.config import ConfigError, PipelineConfig, load_config
 from rag_framework.embeddings.base import EmbeddingProvider
 from rag_framework.embeddings.local import LocalEmbeddingProvider
@@ -53,11 +54,16 @@ def build_loader(config: PipelineConfig) -> DocumentLoader:
 def build_chunker(config: PipelineConfig) -> Chunker:
     if config.chunking.strategy == "publisher_offsets":
         return PublisherOffsetsChunker()
-    # config already guarantees the strategy is a known name; recursive
-    # is scheduled for the Week-2 chunk-size experiments
+    if config.chunking.strategy == "recursive":
+        return RecursiveChunker(
+            target_tokens=config.chunking.target_tokens,
+            overlap_tokens=config.chunking.overlap_tokens,
+            minimum_tokens=config.chunking.minimum_tokens,
+        )
     raise ConfigError(
-        f"chunking.strategy: '{config.chunking.strategy}' is not"
-        " implemented yet (implemented: publisher_offsets)"
+        f"chunking.strategy: unknown strategy"
+        f" '{config.chunking.strategy}'"
+        " (known: publisher_offsets, recursive)"
     )
 
 
@@ -145,6 +151,18 @@ class RAGPipeline:
         # provider reads and indexes the embeddings parquet here), so it
         # is timed and included in the report's total
         setup_start = time.perf_counter()
+        if (
+            config.chunking.strategy == "recursive"
+            and config.embedding.provider == "precomputed"
+        ):
+            # precomputed vectors exist only for publisher chunk
+            # boundaries; computed boundaries can never find them —
+            # fail at construction, not mid-ingest at the first lookup
+            raise ConfigError(
+                "chunking.strategy: 'recursive' cannot be combined with"
+                " embedding.provider 'precomputed' (official vectors"
+                " exist only for publisher chunks); use provider 'local'"
+            )
         self.config = config
         self.loader = build_loader(config)
         self.chunker = build_chunker(config)
