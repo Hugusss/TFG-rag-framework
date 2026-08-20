@@ -1,0 +1,356 @@
+{
+  "experiment": "chunk-size",
+  "configuration": "publisher",
+  "k": 10,
+  "ingest_report": {
+    "documents_read": 2363,
+    "documents_rejected": 0,
+    "duplicates_skipped": 0,
+    "chunks_created": 6240,
+    "bytes_processed": 12469349,
+    "embedding_time_seconds": 1.029,
+    "indexing_time_seconds": 3.964,
+    "total_time_seconds": 5.309,
+    "final_vector_count": 6240,
+    "index_size_bytes": 113616552
+  },
+  "ingest_details": {
+    "pipeline_setup_seconds": 0.035,
+    "documents_without_chunks": 0,
+    "chunks_dropped_below_minimum": null,
+    "windows_clipped": 1949
+  },
+  "latency": {
+    "embed_seconds": {
+      "n": 60,
+      "min": 0.07493,
+      "median": 0.08535,
+      "p95": 0.092786,
+      "max": 0.097037,
+      "mean": 0.08486033333333333,
+      "std": 0.004973597211498155
+    },
+    "search_seconds": {
+      "n": 60,
+      "min": 0.002268,
+      "median": 0.002669,
+      "p95": 0.003097,
+      "max": 0.003937,
+      "mean": 0.0027274,
+      "std": 0.0003155976446891411
+    },
+    "retrieval_seconds": {
+      "n": 60,
+      "min": 0.077877,
+      "median": 0.088232,
+      "p95": 0.095605,
+      "max": 0.100107,
+      "mean": 0.08758905,
+      "std": 0.005034731556647285
+    }
+  },
+  "quality": {
+    "answerable_queries": 26,
+    "mean_recall_at_k": 0.8906274281274281,
+    "mean_precision_at_k": 0.19230769230769232,
+    "mean_reciprocal_rank": 0.8974358974358974
+  },
+  "unanswerable_top_scores": {
+    "n": 4,
+    "min": 0.28503620624542236,
+    "median": 0.4369545578956604,
+    "p95": 0.5451017618179321,
+    "max": 0.5451017618179321,
+    "mean": 0.3972054272890091,
+    "std": 0.10214195602546738
+  },
+  "per_query": [
+    {
+      "query_id": "q001",
+      "answerable": true,
+      "top_score": 0.5973140001296997,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 0.5
+    },
+    {
+      "query_id": "q002",
+      "answerable": true,
+      "top_score": 0.757043719291687,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q003",
+      "answerable": true,
+      "top_score": 0.7615877985954285,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 0.5
+    },
+    {
+      "query_id": "q004",
+      "answerable": true,
+      "top_score": 0.8591437339782715,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q005",
+      "answerable": true,
+      "top_score": 0.7571006417274475,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q006",
+      "answerable": true,
+      "top_score": 0.6507849097251892,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q007",
+      "answerable": true,
+      "top_score": 0.6762437224388123,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q008",
+      "answerable": true,
+      "top_score": 0.6136960983276367,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q009",
+      "answerable": true,
+      "top_score": 0.6730529069900513,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q010",
+      "answerable": true,
+      "top_score": 0.6462005972862244,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q011",
+      "answerable": true,
+      "top_score": 0.6908228397369385,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 0.3333333333333333
+    },
+    {
+      "query_id": "q012",
+      "answerable": true,
+      "top_score": 0.6458065509796143,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q013",
+      "answerable": true,
+      "top_score": 0.554443359375,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 0.5
+    },
+    {
+      "query_id": "q014",
+      "answerable": true,
+      "top_score": 0.6602827906608582,
+      "recall_at_k": 0.4090909090909091,
+      "precision_at_k": 0.9,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q015",
+      "answerable": true,
+      "top_score": 0.7399736642837524,
+      "recall_at_k": 0.4,
+      "precision_at_k": 1.0,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q016",
+      "answerable": true,
+      "top_score": 0.7583513855934143,
+      "recall_at_k": 0.2222222222222222,
+      "precision_at_k": 0.4,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q017",
+      "answerable": true,
+      "top_score": 0.6903083324432373,
+      "recall_at_k": 0.375,
+      "precision_at_k": 0.3,
+      "reciprocal_rank": 0.5
+    },
+    {
+      "query_id": "q018",
+      "answerable": true,
+      "top_score": 0.36561691761016846,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q019",
+      "answerable": true,
+      "top_score": 0.5801562070846558,
+      "recall_at_k": 0.75,
+      "precision_at_k": 0.3,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q020",
+      "answerable": true,
+      "top_score": 0.6455516815185547,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q021",
+      "answerable": false,
+      "top_score": 0.3217291831970215
+    },
+    {
+      "query_id": "q022",
+      "answerable": false,
+      "top_score": 0.28503620624542236
+    },
+    {
+      "query_id": "q023",
+      "answerable": false,
+      "top_score": 0.4369545578956604
+    },
+    {
+      "query_id": "q024",
+      "answerable": false,
+      "top_score": 0.5451017618179321
+    },
+    {
+      "query_id": "q025a",
+      "answerable": true,
+      "top_score": 0.5806684494018555,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q025b",
+      "answerable": true,
+      "top_score": 0.6202744245529175,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q026a",
+      "answerable": true,
+      "top_score": 0.7210956811904907,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q026b",
+      "answerable": true,
+      "top_score": 0.6953405141830444,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q027a",
+      "answerable": true,
+      "top_score": 0.7959420680999756,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q027b",
+      "answerable": true,
+      "top_score": 0.6387659907341003,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    }
+  ],
+  "warm_up_policy": "3 unmeasured warm-up queries per configuration (the first also loads the query encoder)",
+  "repetitions": 2,
+  "manifest": {
+    "timestamp": "2026-08-19T16:51:03+00:00",
+    "git_commit": "9b3b51f0ce0f93fb4b36131677e30404fa148e03-dirty",
+    "dataset_version": "owi-v2.0.0-gpu-spa-2026-07-28",
+    "machine": {
+      "hostname": "sugus",
+      "platform": "Linux-7.1.7-100.fc43.x86_64-x86_64-with-glibc2.42",
+      "python": "3.14.6"
+    },
+    "versions": {
+      "rag-framework": "0.1.0",
+      "chromadb": "1.5.9",
+      "pyarrow": "25.0.0",
+      "pyyaml": "6.0.3",
+      "sentence-transformers": "5.7.0",
+      "transformers": "5.15.0",
+      "torch": "2.13.0",
+      "peft": "0.20.0"
+    },
+    "config": {
+      "dataset": {
+        "loader": "owi",
+        "path": "./data/owi",
+        "version": "owi-v2.0.0-gpu-spa-2026-07-28"
+      },
+      "chunking": {
+        "strategy": "publisher_offsets",
+        "target_tokens": null,
+        "overlap_tokens": null,
+        "minimum_tokens": null
+      },
+      "embedding": {
+        "provider": "precomputed",
+        "model": "jinaai/jina-embeddings-v5-text-small",
+        "normalize": true,
+        "batch_size": null
+      },
+      "vector_store": {
+        "type": "chroma",
+        "path": "state/chunkexp/publisher",
+        "collection": "owi-spa0728-publisherchunks-jinav5small-v1"
+      },
+      "retrieval": {
+        "mode": "sequential",
+        "k": 10,
+        "partitions": 1,
+        "workers": 1
+      },
+      "generation": {
+        "enabled": false,
+        "provider": "mock"
+      },
+      "metrics": {
+        "output": "./results"
+      }
+    }
+  }
+}

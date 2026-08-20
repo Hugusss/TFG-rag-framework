@@ -188,6 +188,17 @@ def run_configuration(name: str, queries: list[dict], args) -> None:
     _logger.info("=== configuration %s ===", name)
     config = pipeline_config(name, args)
     pipeline = RAGPipeline(config)
+    if config.embedding.provider == "local":
+        # resumable encodes: an interrupted run (the first medium sweep
+        # was OOM-killed 3.2 h in) loses at most one 512-chunk call;
+        # cache stats are reported so embedding_time_seconds is always
+        # interpretable (hits make it a partial cost, not a raw cost)
+        from rag_framework.embeddings.cache import CachedEmbeddingProvider
+
+        pipeline.embedding_provider = CachedEmbeddingProvider(
+            pipeline.embedding_provider,
+            Path(args.state) / f"{name}-embedding-cache",
+        )
     report = pipeline.ingest()
     _logger.info(
         "%s: %d chunks ingested in %.1f s",
@@ -210,6 +221,12 @@ def run_configuration(name: str, queries: list[dict], args) -> None:
             ),
             "windows_clipped": getattr(
                 pipeline.chunker, "windows_clipped", None
+            ),
+            "embedding_cache_hits": getattr(
+                pipeline.embedding_provider, "hits", None
+            ),
+            "embedding_cache_misses": getattr(
+                pipeline.embedding_provider, "misses", None
             ),
         },
         **measurements,

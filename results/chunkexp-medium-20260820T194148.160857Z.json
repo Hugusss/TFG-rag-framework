@@ -1,0 +1,364 @@
+{
+  "experiment": "chunk-size",
+  "configuration": "medium",
+  "k": 10,
+  "ingest_report": {
+    "documents_read": 2363,
+    "documents_rejected": 0,
+    "duplicates_skipped": 0,
+    "chunks_created": 4285,
+    "bytes_processed": 12469349,
+    "embedding_time_seconds": 9469.442,
+    "indexing_time_seconds": 3.855,
+    "total_time_seconds": 9484.366,
+    "final_vector_count": 4285,
+    "index_size_bytes": 110993096
+  },
+  "ingest_details": {
+    "pipeline_setup_seconds": 10.661,
+    "documents_without_chunks": 214,
+    "chunks_dropped_below_minimum": 292,
+    "windows_clipped": null,
+    "embedding_cache_hits": 1024,
+    "embedding_cache_misses": 3261
+  },
+  "latency": {
+    "embed_seconds": {
+      "n": 60,
+      "min": 0.076996,
+      "median": 0.085318,
+      "p95": 0.09543,
+      "max": 0.101489,
+      "mean": 0.08628875,
+      "std": 0.005425055586888796
+    },
+    "search_seconds": {
+      "n": 60,
+      "min": 0.002535,
+      "median": 0.003367,
+      "p95": 0.005707,
+      "max": 0.007898,
+      "mean": 0.00379395,
+      "std": 0.0012009308670777015
+    },
+    "retrieval_seconds": {
+      "n": 60,
+      "min": 0.079648,
+      "median": 0.088977,
+      "p95": 0.101393,
+      "max": 0.10841,
+      "mean": 0.09008411666666666,
+      "std": 0.005826462117190462
+    }
+  },
+  "quality": {
+    "answerable_queries": 26,
+    "mean_recall_at_k": 0.896033411033411,
+    "mean_precision_at_k": 0.19615384615384618,
+    "mean_reciprocal_rank": 0.8974358974358974
+  },
+  "unanswerable_top_scores": {
+    "n": 4,
+    "min": 0.311939001083374,
+    "median": 0.4480108618736267,
+    "p95": 0.5525129437446594,
+    "max": 0.5525129437446594,
+    "mean": 0.409706175327301,
+    "std": 0.09793583563430364
+  },
+  "per_query": [
+    {
+      "query_id": "q001",
+      "answerable": true,
+      "top_score": 0.5971506834030151,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 0.3333333333333333
+    },
+    {
+      "query_id": "q002",
+      "answerable": true,
+      "top_score": 0.7605449557304382,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q003",
+      "answerable": true,
+      "top_score": 0.7614895105361938,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 0.5
+    },
+    {
+      "query_id": "q004",
+      "answerable": true,
+      "top_score": 0.838747501373291,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q005",
+      "answerable": true,
+      "top_score": 0.7707352638244629,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q006",
+      "answerable": true,
+      "top_score": 0.6129193305969238,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q007",
+      "answerable": true,
+      "top_score": 0.6607966423034668,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q008",
+      "answerable": true,
+      "top_score": 0.6103584170341492,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q009",
+      "answerable": true,
+      "top_score": 0.6865022778511047,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q010",
+      "answerable": true,
+      "top_score": 0.6511070132255554,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q011",
+      "answerable": true,
+      "top_score": 0.6797960996627808,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 0.5
+    },
+    {
+      "query_id": "q012",
+      "answerable": true,
+      "top_score": 0.6771752834320068,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q013",
+      "answerable": true,
+      "top_score": 0.6165778636932373,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q014",
+      "answerable": true,
+      "top_score": 0.6543955206871033,
+      "recall_at_k": 0.4090909090909091,
+      "precision_at_k": 0.9,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q015",
+      "answerable": true,
+      "top_score": 0.7635481357574463,
+      "recall_at_k": 0.36,
+      "precision_at_k": 0.9,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q016",
+      "answerable": true,
+      "top_score": 0.7693228125572205,
+      "recall_at_k": 0.2777777777777778,
+      "precision_at_k": 0.5,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q017",
+      "answerable": true,
+      "top_score": 0.6631766557693481,
+      "recall_at_k": 0.5,
+      "precision_at_k": 0.4,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q018",
+      "answerable": true,
+      "top_score": 0.39588403701782227,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q019",
+      "answerable": true,
+      "top_score": 0.5523457527160645,
+      "recall_at_k": 0.75,
+      "precision_at_k": 0.3,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q020",
+      "answerable": true,
+      "top_score": 0.6443454027175903,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q021",
+      "answerable": false,
+      "top_score": 0.32636189460754395
+    },
+    {
+      "query_id": "q022",
+      "answerable": false,
+      "top_score": 0.311939001083374
+    },
+    {
+      "query_id": "q023",
+      "answerable": false,
+      "top_score": 0.4480108618736267
+    },
+    {
+      "query_id": "q024",
+      "answerable": false,
+      "top_score": 0.5525129437446594
+    },
+    {
+      "query_id": "q025a",
+      "answerable": true,
+      "top_score": 0.5844395160675049,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 0.5
+    },
+    {
+      "query_id": "q025b",
+      "answerable": true,
+      "top_score": 0.6310298442840576,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q026a",
+      "answerable": true,
+      "top_score": 0.7380144596099854,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q026b",
+      "answerable": true,
+      "top_score": 0.6963757872581482,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q027a",
+      "answerable": true,
+      "top_score": 0.7978899478912354,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query_id": "q027b",
+      "answerable": true,
+      "top_score": 0.636009693145752,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.1,
+      "reciprocal_rank": 0.5
+    }
+  ],
+  "warm_up_policy": "3 unmeasured warm-up queries per configuration (the first also loads the query encoder)",
+  "repetitions": 2,
+  "manifest": {
+    "timestamp": "2026-08-20T19:41:46+00:00",
+    "git_commit": "8ca3010334040241c3d5fbecc048119db1a8eab0-dirty",
+    "dataset_version": "owi-v2.0.0-gpu-spa-2026-07-28",
+    "machine": {
+      "hostname": "sugus",
+      "platform": "Linux-7.1.8-100.fc43.x86_64-x86_64-with-glibc2.42",
+      "python": "3.14.7"
+    },
+    "versions": {
+      "rag-framework": "0.1.0",
+      "chromadb": "1.5.9",
+      "pyarrow": "25.0.0",
+      "pyyaml": "6.0.3",
+      "sentence-transformers": "5.7.0",
+      "transformers": "5.15.0",
+      "torch": "2.13.0",
+      "peft": "0.20.0"
+    },
+    "config": {
+      "dataset": {
+        "loader": "owi",
+        "path": "./data/owi",
+        "version": "owi-v2.0.0-gpu-spa-2026-07-28"
+      },
+      "chunking": {
+        "strategy": "recursive",
+        "target_tokens": 500,
+        "overlap_tokens": 50,
+        "minimum_tokens": 50
+      },
+      "embedding": {
+        "provider": "local",
+        "model": "jinaai/jina-embeddings-v5-text-small",
+        "normalize": true,
+        "batch_size": 8
+      },
+      "vector_store": {
+        "type": "chroma",
+        "path": "state/chunkexp/medium",
+        "collection": "owi-spa0728-rec500o50-jinav5small-v1"
+      },
+      "retrieval": {
+        "mode": "sequential",
+        "k": 10,
+        "partitions": 1,
+        "workers": 1
+      },
+      "generation": {
+        "enabled": false,
+        "provider": "mock"
+      },
+      "metrics": {
+        "output": "./results"
+      }
+    }
+  },
+  "word_subword_ratio": {
+    "sample_chunks": 300,
+    "words": 104431,
+    "subword_tokens": 243260,
+    "subwords_per_word": 2.329
+  }
+}
