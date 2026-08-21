@@ -7,6 +7,16 @@ from abc import ABC, abstractmethod
 from rag_framework.models import SearchResult
 
 
+class RetrievalError(Exception):
+    """A condition that invalidates retrieval work.
+
+    Invalid merge input (non-finite scores, bad ``k``), impossible
+    partition arguments, or a worker failure in collective mode — all
+    surface as this type, never as a partial or reordered result list
+    (Rule 6).
+    """
+
+
 class Retriever(ABC):
     """Turns a query string into ranked SearchResults.
 
