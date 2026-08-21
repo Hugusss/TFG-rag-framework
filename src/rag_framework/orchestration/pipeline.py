@@ -36,6 +36,7 @@ from rag_framework.retrieval.base import Retriever
 from rag_framework.retrieval.sequential import SequentialRetriever
 from rag_framework.vectorstores.base import VectorStore
 from rag_framework.vectorstores.chroma import ChromaVectorStore
+from rag_framework.vectorstores.partitioned import PartitionedVectorStore
 
 _logger = logging.getLogger(__name__)
 
@@ -101,15 +102,28 @@ def build_vector_store(
     config: PipelineConfig, provider: EmbeddingProvider
 ) -> VectorStore:
     if config.vector_store.type == "chroma":
-        return ChromaVectorStore(
-            config.vector_store.path,
-            collection_metadata={
-                "model_id": provider.model_id,
-                "dimension": provider.dimension,
-                "normalized": provider.normalized,
-                "ingestion_version": __version__,
-            },
-        )
+        identity = {
+            "model_id": provider.model_id,
+            "dimension": provider.dimension,
+            "normalized": provider.normalized,
+            "ingestion_version": __version__,
+        }
+
+        def chroma_store(extra: dict | None = None) -> VectorStore:
+            return ChromaVectorStore(
+                config.vector_store.path,
+                collection_metadata={**identity, **(extra or {})},
+            )
+
+        if config.retrieval.mode == "collective":
+            # the partition layout is an ingest-time property of the
+            # index, so it is decided here, where the store is built;
+            # P=1 still goes through the partitioned path so Experiment
+            # B's P=1 point runs the same code as P=8
+            return PartitionedVectorStore(
+                chroma_store, config.retrieval.partitions
+            )
+        return chroma_store()
     raise ConfigError(
         f"vector_store.type: unknown type '{config.vector_store.type}'"
         " (known: chroma)"

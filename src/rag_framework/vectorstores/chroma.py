@@ -33,9 +33,12 @@ import chromadb
 from rag_framework.models import Chunk, SearchResult
 from rag_framework.vectorstores.base import VectorStore, VectorStoreError
 
-# collection-metadata keys that define the embedding space; a mismatch
-# on any of them makes an existing collection incompatible
-_IDENTITY_KEYS = ("model_id", "dimension", "normalized")
+# collection-metadata keys that define the embedding space and, for a
+# partitioned index, its layout; a mismatch on any of them makes an
+# existing collection incompatible
+_IDENTITY_KEYS = (
+    "model_id", "dimension", "normalized", "partitions", "partition_index"
+)
 
 _SCALAR_TYPES = (str, int, float, bool)
 

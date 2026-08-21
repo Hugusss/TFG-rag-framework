@@ -183,6 +183,24 @@ class TestFactories:
         with pytest.raises(ConfigError, match="known: mock"):
             build_generator(cfg)
 
+    def test_collective_mode_builds_partitioned_store(self, tmp_path):
+        from rag_framework.vectorstores.partitioned import PartitionedVectorStore
+
+        cfg = config(
+            vector_store=VectorStoreConfig(
+                type="chroma", path=str(tmp_path), collection="col"
+            ),
+            retrieval=RetrievalConfig(mode="collective", partitions=4, workers=2),
+        )
+        store = build_vector_store(cfg, FAKE_PROVIDER)
+        assert isinstance(store, PartitionedVectorStore)
+        assert store.partitions == 4
+        inner = store._stores[3]
+        assert isinstance(inner, ChromaVectorStore)
+        assert inner._metadata["model_id"] == "m"
+        assert inner._metadata["partitions"] == 4
+        assert inner._metadata["partition_index"] == 3
+
     def test_store_is_stamped_with_provider_identity(self, tmp_path):
         cfg = config(
             vector_store=VectorStoreConfig(
