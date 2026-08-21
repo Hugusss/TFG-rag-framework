@@ -21,6 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=9,<10"]
+plots = ["matplotlib>=3.9,<4"]  # benchmarks/plot_results.py only; never imported by the framework (ADR-012)
 
 [tool.setuptools.packages.find]
 where = ["src"]
