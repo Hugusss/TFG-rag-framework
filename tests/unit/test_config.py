@@ -301,7 +301,7 @@ class TestRetrievalShapes:
             load(tmp_path, data)
 
     def test_shipped_collective_configs_parse(self):
-        for partitions in (2, 4, 8):
+        for partitions in (1, 2, 4, 8):
             config = load_config(f"configs/collective_{partitions}.yaml")
             assert config.retrieval.mode == "collective"
             assert config.retrieval.partitions == partitions

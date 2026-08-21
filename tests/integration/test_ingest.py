@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 import pyarrow as pa
 import pyarrow.parquet as pq
 import yaml
@@ -480,3 +481,56 @@ def test_correctness_benchmark_end_to_end(tmp_path, monkeypatch):
     assert layout["vs_exact"]["identical_order"] == 1
     assert all(v == 0 for v in layout["differences"].values())
     assert "git_commit" in payload["manifest"]
+
+
+def test_scaling_benchmark_end_to_end(tmp_path, monkeypatch):
+    """Experiments B and C run through the benchmark on tiny layouts."""
+    import importlib.util
+
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    write_corpus(tmp_path / "corpus")
+    baseline = write_config(tmp_path)
+    assert main(["ingest", "--config", str(baseline)]) == 0
+    layouts = []
+    for partitions in (1, 2):
+        layout_dir = tmp_path / f"p{partitions}"
+        layout_dir.mkdir()
+        config = yaml.safe_load(baseline.read_text())
+        config["vector_store"]["path"] = str(layout_dir / "state")
+        config["retrieval"] = {"mode": "collective", "k": 10, "partitions": partitions, "workers": partitions}
+        path = layout_dir / "config.yaml"
+        path.write_text(yaml.safe_dump(config), encoding="utf-8")
+        assert main(["ingest", "--config", str(path)]) == 0
+        layouts.append(str(path))
+    queries = tmp_path / "queries.jsonl"
+    queries.write_text(json.dumps({"query_id": "q1", "query": "x", "answerable": True, "relevant_document_ids": ["aaa"]}) + "\n")
+
+    spec = importlib.util.spec_from_file_location(
+        "run_scaling", Path(__file__).resolve().parents[2] / "benchmarks" / "run_scaling.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.main([
+        "--baseline", str(baseline), "--layouts", *layouts, "--worker-layout", layouts[1],
+        "--workers", "1", "2", "--queries", str(queries), "--output", str(tmp_path / "results"),
+        "--k", "3", "--repetitions", "2", "--warm-up", "1",
+    ]) == 0
+
+    (partitions,) = (tmp_path / "results").glob("scaling-partitions-*.json")
+    payload = json.loads(partitions.read_text(encoding="utf-8"))
+    assert [r["label"] for r in payload["rows"]] == ["sequential", "P=1", "P=2"]
+    assert payload["rows"][0]["timings"]["search_seconds"]["n"] == 2
+    p2 = payload["rows"][2]
+    assert p2["partition_counts"] == [2, 1] or p2["partition_counts"] == [1, 2]
+    assert p2["partition_size_imbalance"]["max_over_mean"] == pytest.approx(4 / 3)
+    assert set(p2["timings"]) >= {"merge_seconds", "worker_max_seconds", "partition_mean_seconds", "worker_time_imbalance"}
+    assert p2["index_size_bytes"] > 0 and payload["repetitions"] == 2
+
+    (workers,) = (tmp_path / "results").glob("scaling-workers-*.json")
+    payload = json.loads(workers.read_text(encoding="utf-8"))
+    assert [r["label"] for r in payload["rows"]] == ["serial x1", "threads x1", "threads x2"]
+    assert payload["rows"][0]["executor"] == "serial"

@@ -169,3 +169,18 @@ def classify_differences(
         "both_miss": len(exact_ids - cand_set - base_set),
         "outside_exact": len((cand_set | base_set) - exact_ids),
     }
+
+
+def imbalance(values: list[float]) -> dict:
+    """Spread of a per-partition quantity (sizes, worker times) relative
+    to its mean — spec section 18 B's "imbalance between partitions"."""
+    if not values:
+        raise ValueError("imbalance is undefined for an empty list")
+    mean = sum(values) / len(values)
+    if mean == 0:
+        return {"max_over_mean": None, "min_over_mean": None, "mean": 0.0}
+    return {
+        "max_over_mean": max(values) / mean,
+        "min_over_mean": min(values) / mean,
+        "mean": mean,
+    }

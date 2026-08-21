@@ -4,6 +4,7 @@ import pytest
 
 from rag_framework.metrics.quality import (
     classify_differences,
+    imbalance,
     discordant_pairs,
     max_score_difference,
     overlap_at_k,
@@ -71,3 +72,16 @@ class TestClassification:
         baseline = [res("b", 0.8), res("a", 0.9)]  # impossible for an exact backend
         counts = classify_differences(candidate, baseline, candidate)
         assert counts["score_reorders"] == 1 and counts["tie_reorders"] == 0
+
+
+class TestImbalance:
+    def test_balanced_and_skewed(self):
+        assert imbalance([10, 10, 10]) == {"max_over_mean": 1.0, "min_over_mean": 1.0, "mean": 10.0}
+        skewed = imbalance([5, 15])
+        assert skewed["max_over_mean"] == pytest.approx(1.5)
+        assert skewed["min_over_mean"] == pytest.approx(0.5)
+
+    def test_degenerate_inputs(self):
+        assert imbalance([0, 0])["max_over_mean"] is None
+        with pytest.raises(ValueError):
+            imbalance([])
