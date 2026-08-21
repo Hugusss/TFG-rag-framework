@@ -1,0 +1,781 @@
+{
+  "experiment": "dataset-size-scaling",
+  "k": 10,
+  "queries": 30,
+  "repetitions": 5,
+  "warm_up_policy": "3 unmeasured warm-up queries per subset; the query encoder is loaded once and shared by every subset",
+  "index_policy": "every subset is built fresh in its own directory under state/dataset-scaling/20260821T145547.235340",
+  "rows": [
+    {
+      "percent": 10,
+      "documents": 253,
+      "documents_sampled_out": 2110,
+      "chunks": 663,
+      "vectors": 663,
+      "index_construction_seconds": 0.675,
+      "indexing_seconds": 0.36,
+      "embedding_seconds": 0.11,
+      "index_size_bytes": 14342308,
+      "relevant_coverage": {
+        "relevant_documents": 92,
+        "in_subset": 10,
+        "fraction": 0.10869565217391304
+      },
+      "latency": {
+        "retrieval_seconds": {
+          "n": 150,
+          "min": 0.07302805699873716,
+          "median": 0.08202878900192445,
+          "p95": 0.09376609500031918,
+          "max": 0.10481868100032443,
+          "mean": 0.08250828768024804,
+          "std": 0.005655204526688876
+        },
+        "search_seconds": {
+          "n": 150,
+          "min": 0.0015650979985366575,
+          "median": 0.0017950999972526915,
+          "p95": 0.0024338040020666085,
+          "max": 0.007779692001349758,
+          "mean": 0.0019217840530230507,
+          "std": 0.0005756341193478929
+        }
+      },
+      "throughput": {
+        "queries_per_second": 12.116496282950923,
+        "search_only_queries_per_second": 520.3498272487775,
+        "measured_queries": 150
+      },
+      "quality": {
+        "answerable_queries": 26,
+        "mean_recall_at_k": 0.13720668220668222,
+        "mean_reciprocal_rank": 0.2692307692307692
+      },
+      "per_query": [
+        {
+          "query_id": "q001",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q002",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q003",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q004",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q005",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q006",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q007",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q008",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q009",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q010",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q011",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q012",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q013",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q014",
+          "recall_at_k": 0.18181818181818182,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q015",
+          "recall_at_k": 0.08,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q016",
+          "recall_at_k": 0.05555555555555555,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q017",
+          "recall_at_k": 0.25,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q018",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q019",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q020",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q025a",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q025b",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q026a",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q026b",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q027a",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q027b",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        }
+      ]
+    },
+    {
+      "percent": 25,
+      "documents": 624,
+      "documents_sampled_out": 1739,
+      "chunks": 1664,
+      "vectors": 1664,
+      "index_construction_seconds": 1.469,
+      "indexing_seconds": 0.944,
+      "embedding_seconds": 0.298,
+      "index_size_bytes": 30864256,
+      "relevant_coverage": {
+        "relevant_documents": 92,
+        "in_subset": 25,
+        "fraction": 0.2717391304347826
+      },
+      "latency": {
+        "retrieval_seconds": {
+          "n": 150,
+          "min": 0.07506908200593898,
+          "median": 0.08457929299765965,
+          "p95": 0.0973886380015756,
+          "max": 0.10384201099805068,
+          "mean": 0.08576664567323557,
+          "std": 0.006306958161776135
+        },
+        "search_seconds": {
+          "n": 150,
+          "min": 0.0018211600036011077,
+          "median": 0.0020896549976896495,
+          "p95": 0.0027106550041935407,
+          "max": 0.0037919420065009035,
+          "mean": 0.0021923980668361763,
+          "std": 0.00028290298601608434
+        }
+      },
+      "throughput": {
+        "queries_per_second": 11.656167973141153,
+        "search_only_queries_per_second": 456.1215479646395,
+        "measured_queries": 150
+      },
+      "quality": {
+        "answerable_queries": 26,
+        "mean_recall_at_k": 0.3856060606060606,
+        "mean_reciprocal_rank": 0.4519230769230769
+      },
+      "per_query": [
+        {
+          "query_id": "q001",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q002",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q003",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "query_id": "q004",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q005",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q006",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q007",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q008",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q009",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q010",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q011",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q012",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q013",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q014",
+          "recall_at_k": 0.4090909090909091,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q015",
+          "recall_at_k": 0.2,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q016",
+          "recall_at_k": 0.16666666666666666,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q017",
+          "recall_at_k": 0.25,
+          "reciprocal_rank": 0.25
+        },
+        {
+          "query_id": "q018",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q019",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q020",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q025a",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q025b",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q026a",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q026b",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q027a",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q027b",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        }
+      ]
+    },
+    {
+      "percent": 50,
+      "documents": 1205,
+      "documents_sampled_out": 1158,
+      "chunks": 3202,
+      "vectors": 3202,
+      "index_construction_seconds": 2.705,
+      "indexing_seconds": 1.888,
+      "embedding_seconds": 0.569,
+      "index_size_bytes": 60906472,
+      "relevant_coverage": {
+        "relevant_documents": 92,
+        "in_subset": 44,
+        "fraction": 0.4782608695652174
+      },
+      "latency": {
+        "retrieval_seconds": {
+          "n": 150,
+          "min": 0.07654290800564922,
+          "median": 0.08437590999528766,
+          "p95": 0.0946157350044814,
+          "max": 0.09843127099884441,
+          "mean": 0.08528026829391214,
+          "std": 0.005064649241644517
+        },
+        "search_seconds": {
+          "n": 150,
+          "min": 0.001923342999361921,
+          "median": 0.002175998000893742,
+          "p95": 0.0029745619976893067,
+          "max": 0.0040332770004170015,
+          "mean": 0.002290458632972635,
+          "std": 0.0003245313755527118
+        }
+      },
+      "throughput": {
+        "queries_per_second": 11.72240456952203,
+        "search_only_queries_per_second": 436.5937832730758,
+        "measured_queries": 150
+      },
+      "quality": {
+        "answerable_queries": 26,
+        "mean_recall_at_k": 0.47643550893550896,
+        "mean_reciprocal_rank": 0.5384615384615384
+      },
+      "per_query": [
+        {
+          "query_id": "q001",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q002",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q003",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "query_id": "q004",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q005",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q006",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q007",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q008",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q009",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q010",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q011",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "query_id": "q012",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q013",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q014",
+          "recall_at_k": 0.45454545454545453,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q015",
+          "recall_at_k": 0.28,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q016",
+          "recall_at_k": 0.2777777777777778,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q017",
+          "recall_at_k": 0.375,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q018",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q019",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q020",
+          "recall_at_k": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "query_id": "q025a",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q025b",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q026a",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q026b",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q027a",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q027b",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        }
+      ]
+    },
+    {
+      "percent": 100,
+      "documents": 2363,
+      "documents_sampled_out": 0,
+      "chunks": 6240,
+      "vectors": 6240,
+      "index_construction_seconds": 5.337,
+      "indexing_seconds": 3.964,
+      "embedding_seconds": 1.069,
+      "index_size_bytes": 113563304,
+      "relevant_coverage": {
+        "relevant_documents": 92,
+        "in_subset": 92,
+        "fraction": 1.0
+      },
+      "latency": {
+        "retrieval_seconds": {
+          "n": 150,
+          "min": 0.07567917100095656,
+          "median": 0.08965420100139454,
+          "p95": 0.10097124499588972,
+          "max": 0.1058234829979483,
+          "mean": 0.08970220735296607,
+          "std": 0.006561867574705631
+        },
+        "search_seconds": {
+          "n": 150,
+          "min": 0.0021906259935349226,
+          "median": 0.0027425459993537515,
+          "p95": 0.003122039997833781,
+          "max": 0.00455637199775083,
+          "mean": 0.00273990238677167,
+          "std": 0.00027097458194920773
+        }
+      },
+      "throughput": {
+        "queries_per_second": 11.144603653303614,
+        "search_only_queries_per_second": 364.9765060346783,
+        "measured_queries": 150
+      },
+      "quality": {
+        "answerable_queries": 26,
+        "mean_recall_at_k": 0.8906274281274281,
+        "mean_reciprocal_rank": 0.8974358974358974
+      },
+      "per_query": [
+        {
+          "query_id": "q001",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "query_id": "q002",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q003",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "query_id": "q004",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q005",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q006",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q007",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q008",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q009",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q010",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q011",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "query_id": "q012",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q013",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "query_id": "q014",
+          "recall_at_k": 0.4090909090909091,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q015",
+          "recall_at_k": 0.4,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q016",
+          "recall_at_k": 0.2222222222222222,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q017",
+          "recall_at_k": 0.375,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "query_id": "q018",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q019",
+          "recall_at_k": 0.75,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q020",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q025a",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q025b",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q026a",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q026b",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q027a",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "query_id": "q027b",
+          "recall_at_k": 1.0,
+          "reciprocal_rank": 1.0
+        }
+      ]
+    }
+  ],
+  "manifest": {
+    "timestamp": "2026-08-21T14:56:58+00:00",
+    "git_commit": "78de912f8d25fe7a9d0b0a73f6e8030f1a0f13cf",
+    "dataset_version": "owi-v2.0.0-gpu-spa-2026-07-28",
+    "machine": {
+      "hostname": "sugus",
+      "platform": "Linux-7.1.8-100.fc43.x86_64-x86_64-with-glibc2.42",
+      "python": "3.14.7"
+    },
+    "versions": {
+      "rag-framework": "0.1.0",
+      "chromadb": "1.5.9",
+      "pyarrow": "25.0.0",
+      "pyyaml": "6.0.3",
+      "sentence-transformers": "5.7.0",
+      "transformers": "5.15.0",
+      "torch": "2.13.0",
+      "peft": "0.20.0"
+    },
+    "config": {
+      "dataset": {
+        "loader": "owi",
+        "path": "./data/owi",
+        "version": "owi-v2.0.0-gpu-spa-2026-07-28",
+        "sample_percent": 100
+      },
+      "chunking": {
+        "strategy": "publisher_offsets",
+        "target_tokens": null,
+        "overlap_tokens": null,
+        "minimum_tokens": null
+      },
+      "embedding": {
+        "provider": "precomputed",
+        "model": "jinaai/jina-embeddings-v5-text-small",
+        "normalize": true,
+        "batch_size": null
+      },
+      "vector_store": {
+        "type": "chroma",
+        "path": "./state/chroma",
+        "collection": "owi-spa0728-publisherchunks-jinav5small-v1"
+      },
+      "retrieval": {
+        "mode": "sequential",
+        "k": 10,
+        "partitions": 1,
+        "workers": 1,
+        "executor": "threads"
+      },
+      "generation": {
+        "enabled": false,
+        "provider": "mock"
+      },
+      "metrics": {
+        "output": "./results"
+      }
+    }
+  }
+}
