@@ -80,3 +80,92 @@ def summarize(values: list[float]) -> dict:
         "mean": mean,
         "std": variance**0.5,
     }
+
+
+# --- ranking comparisons (spec section 13.5): candidate vs reference ---
+
+
+def overlap_at_k(ranking: list[str], reference: list[str], k: int) -> float:
+    """Fraction of the reference top-``k`` ids present in the candidate
+    top-``k``, with ``k`` as the denominator (shallow lists count)."""
+    if k < 1:
+        raise ValueError("k must be positive")
+    return len(set(ranking[:k]) & set(reference[:k])) / k
+
+
+def positions_preserved(ranking: list[str], reference: list[str], k: int) -> float:
+    """Fraction of the ``k`` positions holding the same id in both."""
+    if k < 1:
+        raise ValueError("k must be positive")
+    return sum(a == b for a, b in zip(ranking[:k], reference[:k])) / k
+
+
+def discordant_pairs(ranking: list[str], reference: list[str]) -> list[tuple[str, str]]:
+    """Pairs of ids present in both lists whose relative order differs
+    (``(x, y)`` with x before y in ``ranking``, after it in
+    ``reference``) — zero means identical order on the common ids."""
+    position = {cid: i for i, cid in enumerate(reference)}
+    common = [cid for cid in ranking if cid in position]
+    pairs = []
+    for i, x in enumerate(common):
+        for y in common[i + 1 :]:
+            if position[x] > position[y]:
+                pairs.append((x, y))
+    return pairs
+
+
+def max_score_difference(
+    scores: dict[str, float], reference_scores: dict[str, float]
+) -> float | None:
+    """Largest absolute score gap over the ids both rankings hold;
+    ``None`` when they share nothing."""
+    shared = scores.keys() & reference_scores.keys()
+    if not shared:
+        return None
+    return max(abs(scores[cid] - reference_scores[cid]) for cid in shared)
+
+
+def classify_differences(
+    candidate: list[SearchResult],
+    baseline: list[SearchResult],
+    exact: list[SearchResult],
+    *,
+    tolerance: float = 1e-6,
+) -> dict:
+    """Attribute every candidate-vs-baseline difference using the
+    exact reference (spec section 13.5: "investigate before assuming").
+
+    Counts returned:
+
+    - ``tie_reorders``: discordant pairs whose two scores are equal
+      (within ``tolerance``) — an ordering convention, not an error;
+    - ``score_reorders``: discordant pairs with different scores —
+      should be zero for exact-scoring backends;
+    - ``baseline_misses``: ids the exact reference ranks in its top-k
+      that the baseline lacks but the candidate has;
+    - ``candidate_misses``: the converse;
+    - ``both_miss``: exact top-k ids neither index returned;
+    - ``outside_exact``: ids either index returned that are not in the
+      exact top-k (the flip side of a miss).
+    """
+    cand_ids = [r.chunk_id for r in candidate]
+    base_ids = [r.chunk_id for r in baseline]
+    exact_ids = {r.chunk_id for r in exact}
+    cand_scores = {r.chunk_id: r.score for r in candidate}
+    base_scores = {r.chunk_id: r.score for r in baseline}
+
+    ties = score_reorders = 0
+    for x, y in discordant_pairs(cand_ids, base_ids):
+        if abs(cand_scores[x] - cand_scores[y]) <= tolerance:
+            ties += 1
+        else:
+            score_reorders += 1
+    cand_set, base_set = set(cand_ids), set(base_ids)
+    return {
+        "tie_reorders": ties,
+        "score_reorders": score_reorders,
+        "baseline_misses": len((exact_ids & cand_set) - base_set),
+        "candidate_misses": len((exact_ids & base_set) - cand_set),
+        "both_miss": len(exact_ids - cand_set - base_set),
+        "outside_exact": len((cand_set | base_set) - exact_ids),
+    }

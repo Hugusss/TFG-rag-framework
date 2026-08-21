@@ -63,6 +63,10 @@ class StubStore:
         self.resets += 1
         self.rows = {}
 
+    def iter_vectors(self):
+        for c, v in self.rows.values():
+            yield c.chunk_id, c.document_id, list(v)
+
 
 def stub_store(partitions):
     made = []
@@ -153,6 +157,13 @@ class TestSearch:
         assert {h.partition_id for h in hits} == {
             str(partition_for(f"d{i}", 4)) for i in range(4)
         }
+
+    def test_iter_vectors_chains_every_partition(self):
+        store, _ = self.seeded()
+        exported = list(store.iter_vectors())
+        assert len(exported) == 10
+        assert {cid for cid, _, _ in exported} == {f"c-d{i}-0" for i in range(10)}
+        assert all(len(vector) == 2 for _, _, vector in exported)
 
     def test_counts_and_reset_cover_every_partition(self):
         store, inner = self.seeded()

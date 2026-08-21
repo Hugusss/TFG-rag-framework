@@ -26,6 +26,7 @@ orchestrator always passes the provider's identity).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import chromadb
@@ -206,6 +207,35 @@ class ChromaVectorStore(VectorStore):
             raise VectorStoreError(f"reset failed: {error}") from error
         self._collection = None
         self.create_or_open(self._name)
+
+    def iter_vectors(self) -> Iterator[tuple[str, str, list[float]]]:
+        collection = self._require_collection()
+        page = self._backend_max_batch() if self._max_batch is None else self._max_batch
+        offset = 0
+        while True:
+            try:
+                response = collection.get(
+                    include=["embeddings", "metadatas"],
+                    limit=page,
+                    offset=offset,
+                )
+            except Exception as error:
+                raise VectorStoreError(f"vector export failed: {error}") from error
+            ids = response["ids"]
+            if not ids:
+                return
+            for chunk_id, metadata, vector in zip(
+                ids, response["metadatas"], response["embeddings"]
+            ):
+                document_id = (metadata or {}).get("document_id")
+                if not document_id:
+                    raise VectorStoreError(
+                        f"stored row {chunk_id} has no document_id —"
+                        " provenance is broken (written by another tool?)"
+                    )
+                # the backend hands back array types; the seam speaks lists
+                yield chunk_id, document_id, [float(x) for x in vector]
+            offset += len(ids)
 
     def _require_collection(self):
         if self._collection is None:

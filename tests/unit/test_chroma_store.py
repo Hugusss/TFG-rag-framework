@@ -205,3 +205,24 @@ class TestAddValidation:
         store = seeded_store(tmp_path)  # 2-d collection
         with pytest.raises(VectorStoreError, match="add failed"):
             store.add([chunk("z", 0)], [[1.0, 0.0, 0.0]])  # 3-d vector
+
+
+class TestIterVectors:
+    def test_exports_every_row_with_provenance(self, tmp_path):
+        store = seeded_store(tmp_path)
+        rows = list(store.iter_vectors())
+        assert sorted(cid for cid, _, _ in rows) == ["c-a-0", "c-b-0", "c-c-0"]
+        by_id = {cid: (doc, vec) for cid, doc, vec in rows}
+        assert by_id["c-a-0"][0] == "a"
+        assert by_id["c-a-0"][1] == pytest.approx([1.0, 0.0])
+        assert all(isinstance(x, float) for _, _, vec in rows for x in vec)
+
+    def test_pages_through_large_collections(self, tmp_path, monkeypatch):
+        store = seeded_store(tmp_path)
+        store._max_batch = 2  # force two pages for three rows
+        assert len(list(store.iter_vectors())) == 3
+
+    def test_requires_open_collection(self, tmp_path):
+        store = ChromaVectorStore(tmp_path / "chroma")
+        with pytest.raises(VectorStoreError, match="create_or_open"):
+            list(store.iter_vectors())

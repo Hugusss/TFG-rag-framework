@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 
 from rag_framework.models import Chunk, SearchResult
 
@@ -44,6 +45,11 @@ class VectorStore(ABC):
     - Collections persist across processes; :meth:`count` reports the
       stored vector count; :meth:`reset` empties the collection but
       leaves it usable (controlled experiments, spec section 11).
+    - :meth:`iter_vectors` streams every stored ``(chunk_id,
+      document_id, vector)`` in a stable order, so an exact brute-force
+      reference can be computed over precisely what the index holds
+      (spec section 13.5: differences between approximate indexes are
+      only attributable against an exact answer).
     """
 
     @abstractmethod
@@ -70,3 +76,7 @@ class VectorStore(ABC):
     @abstractmethod
     def reset(self) -> None:
         """Empty the collection, keeping it usable."""
+
+    @abstractmethod
+    def iter_vectors(self) -> Iterator[tuple[str, str, list[float]]]:
+        """Stream ``(chunk_id, document_id, vector)`` for every row."""

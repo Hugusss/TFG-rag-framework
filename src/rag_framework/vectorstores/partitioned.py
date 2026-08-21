@@ -22,7 +22,7 @@ as a reference.
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 from rag_framework.models import Chunk, SearchResult
 from rag_framework.retrieval.merge import merge_top_k
@@ -129,3 +129,7 @@ class PartitionedVectorStore(VectorStore):
     def reset(self) -> None:
         for store in self._stores:
             store.reset()
+
+    def iter_vectors(self) -> Iterator[tuple[str, str, list[float]]]:
+        for store in self._stores:
+            yield from store.iter_vectors()

@@ -434,3 +434,49 @@ def test_collective_mode_end_to_end(tmp_path, capsys, monkeypatch):
     assert payload["retrieval_mode"] == "collective"
     assert payload["partitions"] == 2 and payload["executor"] == "threads"
     assert payload["sources"][0]["partition_id"] in ("0", "1")
+
+
+def test_correctness_benchmark_end_to_end(tmp_path, monkeypatch):
+    """Experiment E runs through the benchmark on baseline + P=2 layouts."""
+    import importlib.util
+
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    write_corpus(tmp_path / "corpus")
+    baseline = write_config(tmp_path)
+    assert main(["ingest", "--config", str(baseline)]) == 0
+    collective_dir = tmp_path / "collective"
+    collective_dir.mkdir()
+    config = yaml.safe_load(baseline.read_text())
+    config["vector_store"]["path"] = str(collective_dir / "state")
+    config["retrieval"] = {"mode": "collective", "k": 10, "partitions": 2, "workers": 1, "executor": "serial"}
+    collective = collective_dir / "config.yaml"
+    collective.write_text(yaml.safe_dump(config), encoding="utf-8")
+    assert main(["ingest", "--config", str(collective)]) == 0
+    queries = tmp_path / "queries.jsonl"
+    queries.write_text(
+        json.dumps({"query_id": "q1", "query": "x", "answerable": True, "relevant_document_ids": ["aaa"]}) + "\n"
+    )
+
+    spec = importlib.util.spec_from_file_location(
+        "run_correctness", Path(__file__).resolve().parents[2] / "benchmarks" / "run_correctness.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.main([
+        "--baseline", str(baseline), "--collective", str(collective),
+        "--queries", str(queries), "--output", str(tmp_path / "results"), "--k", "3",
+    ]) == 0
+
+    (report,) = (tmp_path / "results").glob("correctness-*.json")
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["vectors"] == 3
+    assert payload["baseline_vs_exact"]["summary"]["recall"] == 1.0
+    (layout,) = payload["layouts"]
+    assert layout["partitions"] == 2
+    assert layout["vs_exact"]["identical_order"] == 1
+    assert all(v == 0 for v in layout["differences"].values())
+    assert "git_commit" in payload["manifest"]
