@@ -12,7 +12,8 @@ Validation boundaries — what is checked where:
 - **Here**: structure and topology. Every key exists with the right type,
   and value-dependent shapes are coherent: ``chunking.strategy:
   publisher_offsets`` admits no token sizes, ``retrieval.mode:
-  sequential`` admits only one partition and one worker. Coherence
+  sequential`` admits only one partition and one worker, a serial
+  executor admits one worker. Coherence
   *across* seams (e.g. a chunking strategy incompatible with an
   embedding provider) is adapter semantics, not config topology — it
   is checked at the wiring point (pipeline construction), still before
@@ -115,6 +116,7 @@ class RetrievalConfig:
     k: int = 10
     partitions: int = 1
     workers: int = 1
+    executor: str = "threads"
 
 
 @dataclass(frozen=True, slots=True)
@@ -262,7 +264,9 @@ def _parse_vector_store(section: dict) -> VectorStoreConfig:
 
 
 def _parse_retrieval(section: dict) -> RetrievalConfig:
-    _forbid_unknown(section, {"mode", "k", "partitions", "workers"}, "retrieval")
+    _forbid_unknown(
+        section, {"mode", "k", "partitions", "workers", "executor"}, "retrieval"
+    )
     mode = _take(section, "mode", str, "retrieval")
     if mode not in ("sequential", "collective"):
         raise ConfigError(
@@ -282,7 +286,23 @@ def _parse_retrieval(section: dict) -> RetrievalConfig:
         raise ConfigError(
             "retrieval.partitions/workers: must be 1 when mode is sequential"
         )
-    return RetrievalConfig(mode=mode, k=k, partitions=partitions, workers=workers)
+    if mode == "sequential" and "executor" in section:
+        raise ConfigError(
+            "retrieval.executor: only meaningful when mode is collective"
+        )
+    executor = _take(section, "executor", str, "retrieval", default="threads")
+    if executor not in ("serial", "threads"):
+        raise ConfigError(
+            f"retrieval.executor: unknown executor '{executor}'"
+            " (known: serial, threads)"
+        )
+    if executor == "serial" and workers != 1:
+        raise ConfigError(
+            "retrieval.workers: must be 1 when executor is serial"
+        )
+    return RetrievalConfig(
+        mode=mode, k=k, partitions=partitions, workers=workers, executor=executor
+    )
 
 
 def _parse_generation(section: dict) -> GenerationConfig:

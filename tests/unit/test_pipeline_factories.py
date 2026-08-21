@@ -159,7 +159,33 @@ class TestFactories:
         retriever = build_retriever(cfg, FAKE_PROVIDER, SimpleNamespace())
         assert isinstance(retriever, SequentialRetriever)
 
-    def test_collective_mode_not_implemented_yet(self):
+    def test_collective_mode_builds_collective_retriever(self, tmp_path):
+        from rag_framework.executors.local import SerialExecutor, ThreadExecutor
+        from rag_framework.orchestration.pipeline import build_retriever
+        from rag_framework.retrieval.collective import CollectiveRetriever
+
+        cfg = config(
+            vector_store=VectorStoreConfig(
+                type="chroma", path=str(tmp_path), collection="col"
+            ),
+            retrieval=RetrievalConfig(mode="collective", partitions=4, workers=3),
+        )
+        store = build_vector_store(cfg, FAKE_PROVIDER)
+        retriever = build_retriever(cfg, FAKE_PROVIDER, store)
+        assert isinstance(retriever, CollectiveRetriever)
+        assert isinstance(retriever._executor, ThreadExecutor)
+        assert retriever._executor.workers == 3
+
+        serial = config(
+            vector_store=cfg.vector_store,
+            retrieval=RetrievalConfig(
+                mode="collective", partitions=2, workers=1, executor="serial"
+            ),
+        )
+        retriever = build_retriever(serial, FAKE_PROVIDER, build_vector_store(serial, FAKE_PROVIDER))
+        assert isinstance(retriever._executor, SerialExecutor)
+
+    def test_collective_mode_refuses_a_plain_store(self):
         from types import SimpleNamespace
 
         from rag_framework.orchestration.pipeline import build_retriever
@@ -167,7 +193,7 @@ class TestFactories:
         cfg = config(
             retrieval=RetrievalConfig(mode="collective", partitions=4, workers=4)
         )
-        with pytest.raises(ConfigError, match="not implemented"):
+        with pytest.raises(ConfigError, match="partitioned store"):
             build_retriever(cfg, FAKE_PROVIDER, SimpleNamespace())
 
     def test_mock_generator_builds(self):

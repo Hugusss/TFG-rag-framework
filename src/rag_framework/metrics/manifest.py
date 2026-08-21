@@ -173,6 +173,9 @@ def build_query_payload(pipeline, result) -> dict:
     return {
         "query": result.query,
         "retrieval_mode": pipeline.config.retrieval.mode,
+        "partitions": pipeline.config.retrieval.partitions,
+        "workers": pipeline.config.retrieval.workers,
+        "executor": pipeline.config.retrieval.executor,
         "collection": pipeline.config.vector_store.collection,
         "metrics": result.metrics,
         "answer": result.answer,
@@ -182,6 +185,8 @@ def build_query_payload(pipeline, result) -> dict:
                 "score": source.score,
                 "chunk_id": source.chunk_id,
                 "document_id": source.document_id,
+                "partition_id": source.partition_id,
+                "worker_id": source.worker_id,
                 "url": source.metadata.get("url"),
                 "position": source.metadata.get("position"),
             }

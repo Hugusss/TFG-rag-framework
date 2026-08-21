@@ -27,12 +27,15 @@ from rag_framework.config import ConfigError, PipelineConfig, load_config
 from rag_framework.embeddings.base import EmbeddingProvider
 from rag_framework.embeddings.local import LocalEmbeddingProvider
 from rag_framework.embeddings.precomputed import PrecomputedEmbeddingProvider
+from rag_framework.executors.base import Executor
+from rag_framework.executors.local import SerialExecutor, ThreadExecutor
 from rag_framework.generation.base import Generator
 from rag_framework.generation.mock import MockGenerator
 from rag_framework.loaders.base import DocumentLoader
 from rag_framework.loaders.owi import OwiLoader
 from rag_framework.models import Chunk, IngestionReport, RAGResult
 from rag_framework.retrieval.base import Retriever
+from rag_framework.retrieval.collective import CollectiveRetriever
 from rag_framework.retrieval.sequential import SequentialRetriever
 from rag_framework.vectorstores.base import VectorStore
 from rag_framework.vectorstores.chroma import ChromaVectorStore
@@ -149,11 +152,28 @@ def build_retriever(
 ) -> Retriever:
     if config.retrieval.mode == "sequential":
         return SequentialRetriever(provider, store)
-    # config already guarantees the mode is a known name; collective
-    # arrives with the Week-3 increments
+    if config.retrieval.mode == "collective":
+        if not isinstance(store, PartitionedVectorStore):
+            # wiring invariant, not a user error: the store factory
+            # must have built the partitioned layout for this mode
+            raise ConfigError(
+                "retrieval.mode: collective requires a partitioned store"
+            )
+        return CollectiveRetriever(provider, store, build_executor(config))
     raise ConfigError(
-        f"retrieval.mode: '{config.retrieval.mode}' is not implemented"
-        " yet (implemented: sequential)"
+        f"retrieval.mode: unknown mode '{config.retrieval.mode}'"
+        " (known: sequential, collective)"
+    )
+
+
+def build_executor(config: PipelineConfig) -> Executor:
+    if config.retrieval.executor == "serial":
+        return SerialExecutor()
+    if config.retrieval.executor == "threads":
+        return ThreadExecutor(config.retrieval.workers)
+    raise ConfigError(
+        f"retrieval.executor: unknown executor '{config.retrieval.executor}'"
+        " (known: serial, threads)"
     )
 
 
@@ -355,6 +375,15 @@ class RAGPipeline:
             # retrieval behavior (spec section 12)
             "generation_seconds": generation_seconds,
             "total_seconds": total_seconds,
+            # collective-only stages (spec section 18 B); None in
+            # sequential mode so every report has the same shape
+            "merge_seconds": rounded("merge_seconds"),
+            "worker_max_seconds": rounded("worker_max_seconds"),
+            "worker_mean_seconds": rounded("worker_mean_seconds"),
+            "candidates_returned": timings.get("candidates_returned"),
+            "partition_searches": getattr(
+                self.retriever, "partition_searches", None
+            ),
         }
         return RAGResult(
             query=question, answer=answer, sources=sources, metrics=metrics

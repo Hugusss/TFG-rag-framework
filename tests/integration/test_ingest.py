@@ -85,7 +85,7 @@ def write_corpus(root: Path, docs=DOCS) -> None:
     )
 
 
-def write_config(tmp_path: Path) -> Path:
+def write_config(tmp_path: Path, retrieval=None) -> Path:
     config = {
         "dataset": {"loader": "owi", "path": str(tmp_path / "corpus")},
         "chunking": {"strategy": "publisher_offsets"},
@@ -99,7 +99,7 @@ def write_config(tmp_path: Path) -> Path:
             "path": str(tmp_path / "state"),
             "collection": "test-col",
         },
-        "retrieval": {"mode": "sequential", "k": 10},
+        "retrieval": retrieval or {"mode": "sequential", "k": 10},
         "metrics": {"output": str(tmp_path / "results")},
     }
     path = tmp_path / "config.yaml"
@@ -392,3 +392,45 @@ def test_report_write_failure_keeps_the_metrics(tmp_path, capsys):
     assert exit_code == 3
     printed = capsys.readouterr().out
     assert '"final_vector_count": 3' in printed  # metrics survived
+
+
+def test_collective_mode_end_to_end(tmp_path, capsys, monkeypatch):
+    """Spec Week-3 deliverable: both modes runnable through config."""
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    write_corpus(tmp_path / "corpus")
+    config_path = write_config(
+        tmp_path,
+        retrieval={"mode": "collective", "k": 10, "partitions": 2, "workers": 2},
+    )
+    assert main(["ingest", "--config", str(config_path)]) == 0
+    ingest_payload = json.loads(
+        next((tmp_path / "results").glob("ingest-*.json")).read_text()
+    )
+    assert ingest_payload["report"]["final_vector_count"] == 3
+    capsys.readouterr()
+
+    pipeline = RAGPipeline.from_config(config_path)
+    assert pipeline.vector_store.partitions == 2
+    result = pipeline.query("una pregunta", k=2, retrieval_only=True)
+    assert sum(pipeline.vector_store.partition_counts()) == 3
+    assert abs(result.sources[0].score - 1.0) < 1e-6
+    assert all(s.partition_id in ("0", "1") for s in result.sources)
+    assert all(s.worker_id.startswith("w_") for s in result.sources)
+    assert result.metrics["merge_seconds"] is not None
+    assert result.metrics["candidates_returned"] == 3
+    assert len(result.metrics["partition_searches"]) == 2
+
+    exit_code = main(
+        ["query", "--config", str(config_path), "--question", "una pregunta",
+         "--retrieval-only", "--k", "2"]
+    )
+    assert exit_code == 0
+    (report,) = (tmp_path / "results").glob("query-*.json")
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["retrieval_mode"] == "collective"
+    assert payload["partitions"] == 2 and payload["executor"] == "threads"
+    assert payload["sources"][0]["partition_id"] in ("0", "1")

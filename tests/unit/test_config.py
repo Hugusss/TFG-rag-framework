@@ -279,6 +279,35 @@ class TestRetrievalShapes:
         with pytest.raises(ConfigError, match="embedding.batch_size"):
             load(tmp_path, data)
 
+    def test_executor_defaults_to_threads_and_validates(self, tmp_path):
+        data = base()
+        data["retrieval"] = {"mode": "collective", "partitions": 2, "workers": 2}
+        assert load(tmp_path, data).retrieval.executor == "threads"
+
+        data["retrieval"]["executor"] = "lithops"
+        with pytest.raises(ConfigError, match="retrieval.executor"):
+            load(tmp_path, data)
+
+        data["retrieval"]["executor"] = "serial"
+        with pytest.raises(ConfigError, match="retrieval.workers"):
+            load(tmp_path, data)  # serial admits one worker only
+        data["retrieval"]["workers"] = 1
+        assert load(tmp_path, data).retrieval.executor == "serial"
+
+    def test_executor_is_rejected_in_sequential_mode(self, tmp_path):
+        data = base()
+        data["retrieval"]["executor"] = "threads"
+        with pytest.raises(ConfigError, match="retrieval.executor"):
+            load(tmp_path, data)
+
+    def test_shipped_collective_configs_parse(self):
+        for partitions in (2, 4, 8):
+            config = load_config(f"configs/collective_{partitions}.yaml")
+            assert config.retrieval.mode == "collective"
+            assert config.retrieval.partitions == partitions
+            assert config.retrieval.workers == partitions
+            assert config.vector_store.path.endswith(f"-p{partitions}")
+
     def test_collective_allows_partitions_and_workers(self, tmp_path):
         data = base()
         data["retrieval"] = {"mode": "collective", "k": 10, "partitions": 4, "workers": 2}
