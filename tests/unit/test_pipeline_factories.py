@@ -58,6 +58,15 @@ class TestFactories:
             build_vector_store(cfg, FAKE_PROVIDER), ChromaVectorStore
         )
 
+    def test_sampled_dataset_wraps_the_loader(self):
+        from rag_framework.loaders.sample import SampledLoader
+
+        cfg = config(dataset=DatasetConfig(loader="owi", path="./data/owi", sample_percent=25))
+        loader = build_loader(cfg)
+        assert isinstance(loader, SampledLoader) and loader.percent == 25
+        assert isinstance(loader._inner, OwiLoader)
+        assert isinstance(build_loader(config()), OwiLoader)  # 100 % = plain
+
     def test_unknown_loader_lists_known(self):
         cfg = config(dataset=DatasetConfig(loader="warc", path="p"))
         with pytest.raises(ConfigError, match="known: owi"):

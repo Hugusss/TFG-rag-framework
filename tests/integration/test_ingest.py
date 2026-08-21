@@ -534,3 +534,49 @@ def test_scaling_benchmark_end_to_end(tmp_path, monkeypatch):
     payload = json.loads(workers.read_text(encoding="utf-8"))
     assert [r["label"] for r in payload["rows"]] == ["serial x1", "threads x1", "threads x2"]
     assert payload["rows"][0]["executor"] == "serial"
+
+
+def test_dataset_scaling_benchmark_end_to_end(tmp_path, monkeypatch):
+    """Experiment A builds fresh subsets and measures them."""
+    import importlib.util
+
+    from rag_framework.models import stable_bucket
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    write_corpus(tmp_path / "corpus")
+    config_path = write_config(tmp_path)
+    queries = tmp_path / "queries.jsonl"
+    queries.write_text(json.dumps({"query_id": "q1", "query": "x", "answerable": True, "relevant_document_ids": ["aaa"]}) + "\n")
+    # a percent that keeps "aaa" but not necessarily "bbb"
+    keep_aaa = stable_bucket("aaa", 100) + 1
+
+    spec = importlib.util.spec_from_file_location(
+        "run_dataset_scaling", Path(__file__).resolve().parents[2] / "benchmarks" / "run_dataset_scaling.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    argv = [
+        "--config", str(config_path), "--percents", str(keep_aaa), "100",
+        "--state", str(tmp_path / "scaling"), "--queries", str(queries),
+        "--output", str(tmp_path / "results"), "--k", "3", "--repetitions", "2", "--warm-up", "1",
+    ]
+    assert module.main(argv) == 0
+    assert module.main(argv) == 0  # a re-run builds into a new run folder
+
+    (report,) = sorted((tmp_path / "results").glob("scaling-dataset-*.json"))[-1:]
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    small, full = payload["rows"]
+    assert full["percent"] == 100 and full["documents"] == 2 and full["vectors"] == 3
+    assert full["documents_sampled_out"] == 0
+    assert small["documents"] + small["documents_sampled_out"] == 2
+    assert small["relevant_coverage"]["fraction"] == 1.0
+    assert small["quality"]["mean_recall_at_k"] == 1.0
+    assert full["throughput"]["queries_per_second"] > 0
+    assert full["latency"]["search_seconds"]["n"] == 2
+    assert full["index_size_bytes"] > 0
+    assert payload["index_policy"].startswith("every subset is built fresh")
+    runs = list((tmp_path / "scaling").iterdir())
+    assert len(runs) == 2 and all((run / "p100").exists() for run in runs)

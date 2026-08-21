@@ -73,6 +73,16 @@ class TestHappyPath:
         config = load(tmp_path, data)
         assert config.dataset.version == "owi-v2.0.0-gpu-spa-2026-07-28"
 
+    def test_dataset_sample_percent_defaults_to_full_and_validates(self, tmp_path):
+        data = base()
+        assert load(tmp_path, data).dataset.sample_percent == 100
+        data["dataset"]["sample_percent"] = 25
+        assert load(tmp_path, data).dataset.sample_percent == 25
+        for bad in (0, 101, True, "50"):
+            data["dataset"]["sample_percent"] = bad
+            with pytest.raises(ConfigError, match="dataset.sample_percent"):
+                load(tmp_path, data)
+
     def test_generation_section_is_optional_with_spec_defaults(self, tmp_path):
         data = base()
         del data["generation"]

@@ -33,6 +33,7 @@ from rag_framework.generation.base import Generator
 from rag_framework.generation.mock import MockGenerator
 from rag_framework.loaders.base import DocumentLoader
 from rag_framework.loaders.owi import OwiLoader
+from rag_framework.loaders.sample import SampledLoader
 from rag_framework.models import Chunk, IngestionReport, RAGResult
 from rag_framework.retrieval.base import Retriever
 from rag_framework.retrieval.collective import CollectiveRetriever
@@ -48,11 +49,18 @@ _BATCH_SIZE = 512  # chunks per embed/store round trip; bounds memory
 
 def build_loader(config: PipelineConfig) -> DocumentLoader:
     if config.dataset.loader == "owi":
-        return OwiLoader()
-    raise ConfigError(
-        f"dataset.loader: unknown loader '{config.dataset.loader}'"
-        " (known: owi)"
-    )
+        loader: DocumentLoader = OwiLoader()
+    else:
+        raise ConfigError(
+            f"dataset.loader: unknown loader '{config.dataset.loader}'"
+            " (known: owi)"
+        )
+    if config.dataset.sample_percent < 100:
+        # a subset is a different corpus: the decorator keeps a
+        # deterministic, nested fraction of the documents (ADR-011)
+        return SampledLoader(loader, config.dataset.sample_percent)
+    return loader
+
 
 
 def build_chunker(config: PipelineConfig) -> Chunker:

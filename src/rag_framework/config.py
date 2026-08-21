@@ -82,6 +82,7 @@ class DatasetConfig:
     loader: str
     path: str
     version: str | None = None
+    sample_percent: int = 100
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,11 +182,19 @@ def _take(section: dict, key: str, expected: type, path: str, default=_MISSING):
 
 
 def _parse_dataset(section: dict) -> DatasetConfig:
-    _forbid_unknown(section, {"loader", "path", "version"}, "dataset")
+    _forbid_unknown(
+        section, {"loader", "path", "version", "sample_percent"}, "dataset"
+    )
+    sample_percent = _take(section, "sample_percent", int, "dataset", default=100)
+    if not 1 <= sample_percent <= 100:
+        raise ConfigError(
+            f"dataset.sample_percent: must be between 1 and 100, got {sample_percent}"
+        )
     return DatasetConfig(
         loader=_take(section, "loader", str, "dataset"),
         path=_take(section, "path", str, "dataset"),
         version=_take(section, "version", str, "dataset", default=None),
+        sample_percent=sample_percent,
     )
 
 

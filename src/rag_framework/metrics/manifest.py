@@ -131,6 +131,7 @@ def build_ingest_payload(pipeline, report) -> dict:
                 "revision": getattr(provider, "revision", None),
             },
             "vectors_before_run": pipeline.vectors_before,
+            "documents_sampled_out": getattr(loader, "documents_sampled_out", None),
             "loader_rejections": len(loader.rejections),
             "loader_rejection_sample": [
                 dataclasses.asdict(r) for r in loader.rejections[:sample]

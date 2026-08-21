@@ -154,3 +154,20 @@ class IngestionReport:
     total_time_seconds: float
     final_vector_count: int
     index_size_bytes: int
+
+
+def stable_bucket(key: str, buckets: int) -> int:
+    """Deterministic bucket of ``key`` in ``[0, buckets)``: the first
+    8 bytes of SHA-256 over the UTF-8 key, big-endian, modulo
+    ``buckets``. Stable across processes, machines and Python versions
+    (unlike ``hash()``, which is salted per process for strings); used
+    for partition assignment and for corpus sampling, so both agree on
+    what a "stable" assignment means (ADR-006, ADR-011)."""
+    if isinstance(buckets, bool) or not isinstance(buckets, int):
+        raise TypeError(f"buckets must be an int, got {type(buckets).__name__}")
+    if buckets < 1:
+        raise ValueError(f"buckets must be at least 1, got {buckets}")
+    if not key:
+        raise ValueError("key must be a non-empty string")
+    digest = hashlib.sha256(key.encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big") % buckets
