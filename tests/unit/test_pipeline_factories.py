@@ -102,7 +102,7 @@ class TestFactories:
             RAGPipeline(cfg)
 
     def test_unknown_embedding_provider(self):
-        cfg = config(embedding=EmbeddingConfig(provider="openai", model="m"))
+        cfg = config(embedding=EmbeddingConfig(provider="remote-api", model="m"))
         with pytest.raises(ConfigError, match="known: precomputed, local"):
             build_embedding_provider(cfg)
 
@@ -214,7 +214,7 @@ class TestFactories:
     def test_unknown_generation_provider(self):
         from rag_framework.orchestration.pipeline import build_generator
 
-        cfg = config(generation=GenerationConfig(enabled=True, provider="openai"))
+        cfg = config(generation=GenerationConfig(enabled=True, provider="remote-api"))
         with pytest.raises(ConfigError, match="known: mock"):
             build_generator(cfg)
 
