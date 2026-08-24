@@ -90,6 +90,31 @@ class TestHappyPath:
         assert config.generation.enabled is False
         assert config.generation.provider == "mock"
 
+    def test_ollama_generation_keys_validate(self, tmp_path):
+        data = base()
+        data["generation"] = {"enabled": True, "provider": "ollama", "model": "m"}
+        config = load(tmp_path, data)
+        assert config.generation.model == "m"
+        assert config.generation.endpoint == "http://localhost:11434"
+        assert config.generation.timeout_seconds == 120
+
+        del data["generation"]["model"]
+        with pytest.raises(ConfigError, match="generation.model"):
+            load(tmp_path, data)
+
+        data["generation"] = {"provider": "ollama", "model": "m", "timeout_seconds": 0}
+        with pytest.raises(ConfigError, match="generation.timeout_seconds"):
+            load(tmp_path, data)
+
+        data["generation"] = {"provider": "mock", "endpoint": "http://x"}
+        with pytest.raises(ConfigError, match="generation.endpoint"):
+            load(tmp_path, data)
+
+    def test_shipped_ollama_config_parses(self):
+        config = load_config("configs/generation_ollama.yaml")
+        assert config.generation.enabled and config.generation.provider == "ollama"
+        assert config.generation.model == "ministral-3"
+
     def test_config_objects_are_frozen(self, tmp_path):
         config = load(tmp_path, base())
         with pytest.raises(dataclasses.FrozenInstanceError):

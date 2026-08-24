@@ -180,6 +180,11 @@ def build_query_payload(pipeline, result) -> dict:
         "collection": pipeline.config.vector_store.collection,
         "metrics": result.metrics,
         "answer": result.answer,
+        "generator": {
+            "provider": pipeline.config.generation.provider,
+            "model": pipeline.config.generation.model,
+            "enabled": pipeline.config.generation.enabled,
+        },
         "sources": [
             {
                 "rank": rank,

@@ -1,0 +1,37 @@
+# The sequential baseline with real grounded generation through an
+# Ollama server. The endpoint is a local port — typically an SSH tunnel
+# to the GPU host running Ollama — so no remote address or credential
+# ever appears in configuration. Retrieval settings mirror
+# local_chroma.yaml; only the generation section differs.
+
+dataset:
+  loader: owi
+  path: ./data/owi
+  version: owi-v2.0.0-gpu-spa-2026-07-28
+
+chunking:
+  strategy: publisher_offsets
+
+embedding:
+  provider: precomputed
+  model: jinaai/jina-embeddings-v5-text-small
+  normalize: true
+
+vector_store:
+  type: chroma
+  path: ./state/chroma
+  collection: owi-spa0728-publisherchunks-jinav5small-v1
+
+retrieval:
+  mode: sequential
+  k: 10
+
+generation:
+  enabled: true
+  provider: ollama
+  model: ministral-3
+  endpoint: http://localhost:11434
+  timeout_seconds: 180
+
+metrics:
+  output: ./results

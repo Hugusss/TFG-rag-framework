@@ -211,6 +211,19 @@ class TestFactories:
 
         assert isinstance(build_generator(config()), MockGenerator)
 
+    def test_ollama_generator_builds_with_config_values(self):
+        from rag_framework.generation.ollama import OllamaGenerator
+        from rag_framework.orchestration.pipeline import build_generator
+
+        cfg = config(generation=GenerationConfig(
+            enabled=True, provider="ollama", model="ministral-3",
+            endpoint="http://localhost:11434", timeout_seconds=30,
+        ))
+        generator = build_generator(cfg)
+        assert isinstance(generator, OllamaGenerator)
+        assert generator.model == "ministral-3"
+        assert generator.timeout_seconds == 30
+
     def test_unknown_generation_provider(self):
         from rag_framework.orchestration.pipeline import build_generator
 

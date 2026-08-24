@@ -31,6 +31,7 @@ from rag_framework.executors.base import Executor
 from rag_framework.executors.local import SerialExecutor, ThreadExecutor
 from rag_framework.generation.base import Generator
 from rag_framework.generation.mock import MockGenerator
+from rag_framework.generation.ollama import OllamaGenerator
 from rag_framework.loaders.base import DocumentLoader
 from rag_framework.loaders.owi import OwiLoader
 from rag_framework.loaders.sample import SampledLoader
@@ -144,12 +145,15 @@ def build_vector_store(
 def build_generator(config: PipelineConfig) -> Generator:
     if config.generation.provider == "mock":
         return MockGenerator()
-    # the real backend is deliberately deferred until the expected
-    # model is agreed (an embedding model cannot generate; a small
-    # CPU-runnable instruct model is the planned candidate)
+    if config.generation.provider == "ollama":
+        return OllamaGenerator(
+            model=config.generation.model,
+            endpoint=config.generation.endpoint,
+            timeout_seconds=config.generation.timeout_seconds,
+        )
     raise ConfigError(
         f"generation.provider: unknown provider"
-        f" '{config.generation.provider}' (known: mock)"
+        f" '{config.generation.provider}' (known: mock, ollama)"
     )
 
 

@@ -124,6 +124,9 @@ class RetrievalConfig:
 class GenerationConfig:
     enabled: bool = False
     provider: str = "mock"
+    model: str | None = None
+    endpoint: str = "http://localhost:11434"
+    timeout_seconds: int = 120
 
 
 @dataclass(frozen=True, slots=True)
@@ -315,10 +318,37 @@ def _parse_retrieval(section: dict) -> RetrievalConfig:
 
 
 def _parse_generation(section: dict) -> GenerationConfig:
-    _forbid_unknown(section, {"enabled", "provider"}, "generation")
+    _forbid_unknown(
+        section,
+        {"enabled", "provider", "model", "endpoint", "timeout_seconds"},
+        "generation",
+    )
+    provider = _take(section, "provider", str, "generation", default="mock")
+    if provider != "ollama":
+        for key in ("model", "endpoint", "timeout_seconds"):
+            if key in section:
+                raise ConfigError(
+                    f"generation.{key}: only meaningful when provider is ollama"
+                )
+    model = _take(section, "model", str, "generation", default=None)
+    endpoint = _take(
+        section, "endpoint", str, "generation", default="http://localhost:11434"
+    )
+    timeout_seconds = _take(
+        section, "timeout_seconds", int, "generation", default=120
+    )
+    if provider == "ollama" and not model:
+        raise ConfigError(
+            "generation.model: required when provider is ollama"
+        )
+    if timeout_seconds < 1:
+        raise ConfigError("generation.timeout_seconds: must be positive")
     return GenerationConfig(
         enabled=_take(section, "enabled", bool, "generation", default=False),
-        provider=_take(section, "provider", str, "generation", default="mock"),
+        provider=provider,
+        model=model,
+        endpoint=endpoint,
+        timeout_seconds=timeout_seconds,
     )
 
 
