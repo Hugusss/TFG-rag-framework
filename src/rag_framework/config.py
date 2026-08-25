@@ -109,6 +109,7 @@ class VectorStoreConfig:
     type: str
     path: str
     collection: str
+    ef_search: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -267,11 +268,15 @@ def _parse_embedding(section: dict) -> EmbeddingConfig:
 
 
 def _parse_vector_store(section: dict) -> VectorStoreConfig:
-    _forbid_unknown(section, {"type", "path", "collection"}, "vector_store")
+    _forbid_unknown(section, {"type", "path", "collection", "ef_search"}, "vector_store")
+    ef_search = _take(section, "ef_search", int, "vector_store", default=None)
+    if ef_search is not None and ef_search < 1:
+        raise ConfigError("vector_store.ef_search: must be positive")
     return VectorStoreConfig(
         type=_take(section, "type", str, "vector_store"),
         path=_take(section, "path", str, "vector_store"),
         collection=_take(section, "collection", str, "vector_store"),
+        ef_search=ef_search,
     )
 
 

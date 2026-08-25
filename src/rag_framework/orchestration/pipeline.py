@@ -125,6 +125,7 @@ def build_vector_store(
             return ChromaVectorStore(
                 config.vector_store.path,
                 collection_metadata={**identity, **(extra or {})},
+                ef_search=config.vector_store.ef_search,
             )
 
         if config.retrieval.mode == "collective":

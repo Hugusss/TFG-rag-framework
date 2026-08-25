@@ -226,3 +226,36 @@ class TestIterVectors:
         store = ChromaVectorStore(tmp_path / "chroma")
         with pytest.raises(VectorStoreError, match="create_or_open"):
             list(store.iter_vectors())
+
+
+class TestEfSearch:
+    def read_ef(self, store):
+        return ((getattr(store._collection, "configuration_json", None) or {})
+                .get("hnsw") or {}).get("ef_search")
+
+    def test_default_backend_ef_untouched(self, tmp_path):
+        assert self.read_ef(seeded_store(tmp_path)) == 100
+
+    def test_ef_applied_on_create_and_on_reopen(self, tmp_path):
+        store = ChromaVectorStore(
+            tmp_path / "chroma", collection_metadata=IDENTITY, ef_search=384
+        )
+        store.create_or_open("col")
+        assert self.read_ef(store) == 384
+        again = ChromaVectorStore(
+            tmp_path / "chroma", collection_metadata=IDENTITY, ef_search=512
+        )
+        again.create_or_open("col")  # existing collection: modify + reopen
+        assert self.read_ef(again) == 512
+        assert again.count() == 0
+
+    def test_search_still_correct_with_custom_ef(self, tmp_path):
+        store = ChromaVectorStore(
+            tmp_path / "chroma", collection_metadata=IDENTITY, ef_search=256
+        )
+        store.create_or_open("col")
+        store.add(
+            [chunk("a", 0), chunk("b", 0)], [norm([1.0, 0.0]), norm([0.0, 1.0])]
+        )
+        results = store.search(norm([1.0, 0.1]), 2)
+        assert [r.document_id for r in results] == ["a", "b"]

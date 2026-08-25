@@ -132,6 +132,9 @@ def build_ingest_payload(pipeline, report) -> dict:
             },
             "vectors_before_run": pipeline.vectors_before,
             "documents_sampled_out": getattr(loader, "documents_sampled_out", None),
+            "duplicate_vectors_skipped": getattr(
+                pipeline.embedding_provider, "duplicate_vectors_skipped", None
+            ),
             "loader_rejections": len(loader.rejections),
             "loader_rejection_sample": [
                 dataclasses.asdict(r) for r in loader.rejections[:sample]

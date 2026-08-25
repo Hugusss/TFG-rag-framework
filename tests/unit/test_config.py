@@ -73,6 +73,16 @@ class TestHappyPath:
         config = load(tmp_path, data)
         assert config.dataset.version == "owi-v2.0.0-gpu-spa-2026-07-28"
 
+    def test_vector_store_ef_search_optional_and_validated(self, tmp_path):
+        data = base()
+        assert load(tmp_path, data).vector_store.ef_search is None
+        data["vector_store"]["ef_search"] = 800
+        assert load(tmp_path, data).vector_store.ef_search == 800
+        for bad in (0, -1, True, "800"):
+            data["vector_store"]["ef_search"] = bad
+            with pytest.raises(ConfigError, match="vector_store.ef_search"):
+                load(tmp_path, data)
+
     def test_dataset_sample_percent_defaults_to_full_and_validates(self, tmp_path):
         data = base()
         assert load(tmp_path, data).dataset.sample_percent == 100

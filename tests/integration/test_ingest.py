@@ -580,3 +580,37 @@ def test_dataset_scaling_benchmark_end_to_end(tmp_path, monkeypatch):
     assert payload["index_policy"].startswith("every subset is built fresh")
     runs = list((tmp_path / "scaling").iterdir())
     assert len(runs) == 2 and all((run / "p100").exists() for run in runs)
+
+
+def test_quality_benchmark_end_to_end(tmp_path, monkeypatch):
+    """run_quality reports index and exact quality side by side."""
+    import importlib.util
+
+    from rag_framework.orchestration import pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module, "LocalEmbeddingProvider", StubQueryEncoder
+    )
+    write_corpus(tmp_path / "corpus")
+    config_path = write_config(tmp_path)
+    assert main(["ingest", "--config", str(config_path)]) == 0
+    queries = tmp_path / "queries.jsonl"
+    queries.write_text(json.dumps({"query_id": "q1", "query": "x", "answerable": True, "relevant_document_ids": ["aaa"]}) + "\n")
+
+    spec = importlib.util.spec_from_file_location(
+        "run_quality", Path(__file__).resolve().parents[2] / "benchmarks" / "run_quality.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.main([
+        "--config", str(config_path), "--label", "tiny", "--queries", str(queries),
+        "--output", str(tmp_path / "results"), "--k", "3", "--repetitions", "2", "--warm-up", "0",
+    ]) == 0
+    (report,) = (tmp_path / "results").glob("quality-tiny-*.json")
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["vectors"] == 3
+    assert payload["quality"]["mean_recall_at_k"] == 1.0
+    assert payload["quality"]["exact_mean_recall_at_k"] == 1.0
+    assert payload["exactness"]["mean_overlap_at_k"] == 1.0
+    assert payload["relevant_coverage"]["in_corpus"] == 1
+    assert payload["latency"]["search_seconds"]["n"] == 2

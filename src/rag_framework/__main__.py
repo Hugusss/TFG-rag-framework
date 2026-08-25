@@ -69,9 +69,7 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-def _query(
-    config_path: str, question: str, k: int | None, retrieval_only: bool
-) -> int:
+def _query(config_path: str, question: str, k: int | None, retrieval_only: bool) -> int:
     try:
         pipeline = RAGPipeline.from_config(config_path)
         result = pipeline.query(question, k=k, retrieval_only=retrieval_only)
@@ -106,12 +104,11 @@ def _ingest(config_path: str) -> int:
         pipeline = RAGPipeline.from_config(config_path)
         report = pipeline.ingest()
     except _USER_ERRORS as error:
-        # a user-fixable failure gets a message, never a traceback
+        #user-fixable failure gets a message
         _logger.error("%s", error)
         return 1
 
-    # print before writing: the metrics of a successful ingest must
-    # survive even if the report file cannot be written
+    # print before writing: the metrics of a successful ingest must survive even if the report file cannot be written
     print(json.dumps(dataclasses.asdict(report), indent=2))
 
     payload = build_ingest_payload(pipeline, report)

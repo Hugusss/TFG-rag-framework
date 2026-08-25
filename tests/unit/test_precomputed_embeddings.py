@@ -126,6 +126,15 @@ class TestFailures:
         with pytest.raises(EmbeddingError, match="inconsistent embedding dimensions"):
             provider_for(tmp_path)
 
+    def test_cross_file_duplicate_keeps_first_and_counts(self, tmp_path):
+        write_embeddings(tmp_path, [("aaa", 0, VEC_A0)], index=0)
+        write_embeddings(tmp_path, [("aaa", 0, VEC_A1), ("bbb", 0, VEC_B0)], index=1)
+        provider = provider_for(tmp_path)
+        assert provider.duplicate_vectors_skipped == 1
+        # the first file's vector is the one served
+        assert provider.embed_documents([chunk("aaa", 0)])[0] == VEC_A0
+        assert provider.embed_documents([chunk("bbb", 0)])[0] == VEC_B0
+
     def test_duplicate_key_rejected_at_init(self, tmp_path):
         write_embeddings(tmp_path, [("aaa", 0, VEC_A0), ("aaa", 0, VEC_A1)])
         with pytest.raises(EmbeddingError, match="duplicate vector"):
@@ -186,11 +195,19 @@ class TestFailures:
         with pytest.raises(EmbeddingError, match="schema differs"):
             provider_for(tmp_path)
 
-    def test_duplicate_key_across_shards_rejected(self, tmp_path):
+    def test_duplicate_key_across_partitions_keeps_first(self, tmp_path):
+        # recrawled documents republish identical content under the same
+        # content-hash id on later days; the provider keeps the first
+        # vector and counts the rest (same-file duplicates still raise)
         write_embeddings(tmp_path, [("aaa", 0, VEC_A0)], index=0)
-        write_embeddings(tmp_path, [("aaa", 0, VEC_A1)], index=1)
-        with pytest.raises(EmbeddingError, match="duplicate vector"):
-            provider_for(tmp_path)
+        write_embeddings(
+            tmp_path, [("aaa", 0, VEC_A1)], index=0,
+            partition="year=2026/month=8/day=13/language=spa",
+        )
+        provider = provider_for(tmp_path)
+        assert provider.duplicate_vectors_skipped == 1
+        assert provider.embed_documents([chunk("aaa", 0)])[0] == VEC_A0
+
 
     def test_zero_row_corpus_rejected(self, tmp_path):
         write_embeddings(tmp_path, [])

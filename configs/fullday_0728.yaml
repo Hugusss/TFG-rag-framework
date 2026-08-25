@@ -1,0 +1,35 @@
+# Full-day corpus: the complete 2026-07-28 gpu day, all 75 languages
+# (~521k documents, ~1.36M official vectors). The large-scale point for
+# the scaling and correctness experiments; retrieval quality against
+# the Spanish evaluation set is NOT meaningful here beyond the spa
+# subset — this corpus exists for label-free measurements (latency,
+# scaling, exactness against the brute-force reference).
+
+dataset:
+  loader: owi
+  path: ./data/owi-fullday-0728
+  version: owi-v2.0.0-gpu-full-2026-07-28-75langs
+
+chunking:
+  strategy: publisher_offsets
+
+embedding:
+  provider: precomputed
+  model: jinaai/jina-embeddings-v5-text-small
+  normalize: true
+
+vector_store:
+  type: chroma
+  path: ./state/chroma-full0728
+  collection: owi-full0728-publisherchunks-jinav5small-v1
+
+retrieval:
+  mode: sequential
+  k: 10
+
+generation:
+  enabled: false
+  provider: mock
+
+metrics:
+  output: ./results

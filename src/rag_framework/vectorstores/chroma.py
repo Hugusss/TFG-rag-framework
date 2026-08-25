@@ -48,13 +48,21 @@ class ChromaVectorStore(VectorStore):
     """VectorStore backed by a persistent local ChromaDB collection."""
 
     def __init__(
-        self, path: str | Path, *, collection_metadata: dict | None = None
+        self,
+        path: str | Path,
+        *,
+        collection_metadata: dict | None = None,
+        ef_search: int | None = None,
     ) -> None:
         """``collection_metadata`` carries the embedding identity to
         stamp at creation (model_id, dimension, normalized, ...); the
-        orchestrator fills it from the EmbeddingProvider."""
+        orchestrator fills it from the EmbeddingProvider. ``ef_search``
+        overrides the HNSW search width — the approximation knob:
+        the backend default (100) measurably loses true neighbours
+        beyond ~10^4 vectors."""
         self._path = Path(path)
         self._metadata = dict(collection_metadata or {})
+        self._ef_search = ef_search
         self._client = None
         self._collection = None
         self._name: str | None = None
@@ -75,6 +83,24 @@ class ChromaVectorStore(VectorStore):
                 f"could not create or open collection '{collection_name}'"
                 f" at {self._path}: {error}"
             ) from error
+
+        if self._ef_search is not None:
+            current = ((getattr(collection, "configuration_json", None) or {})
+                       .get("hnsw") or {}).get("ef_search")
+            if current != self._ef_search:
+                try:
+                    collection.modify(
+                        configuration={"hnsw": {"ef_search": self._ef_search}}
+                    )
+                    # the modified width only takes effect on a fresh
+                    # handle (measured: a stale handle keeps searching
+                    # with the old ef), so reopen before any search
+                    collection = self._client.get_collection(collection_name)
+                except Exception as error:
+                    raise VectorStoreError(
+                        f"could not set ef_search={self._ef_search} on"
+                        f" collection '{collection_name}': {error}"
+                    ) from error
 
         stored = collection.metadata or {}
         space = self._collection_space(collection, stored)

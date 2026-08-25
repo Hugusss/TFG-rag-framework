@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from rag_framework.config import load_config
-from rag_framework.metrics.exact import exact_top_k
+from rag_framework.metrics.exact import exact_top_k_many
 from rag_framework.metrics.manifest import run_manifest, write_report
 from rag_framework.metrics.quality import (
     classify_differences,
@@ -38,7 +38,11 @@ from rag_framework.metrics.quality import (
     positions_preserved,
     recall_at_k,
 )
-from rag_framework.orchestration.pipeline import RAGPipeline, build_retriever
+from rag_framework.orchestration.pipeline import (
+    RAGPipeline,
+    build_retriever,
+    build_vector_store,
+)
 
 _logger = logging.getLogger("benchmarks.run_correctness")
 
@@ -107,35 +111,53 @@ def main(argv: list[str] | None = None) -> int:
     base = RAGPipeline(base_config)
     base.vector_store.create_or_open(base_config.vector_store.collection)
     base._collection_open = True
-    start = time.perf_counter()
-    rows = list(base.vector_store.iter_vectors())
-    export_seconds = time.perf_counter() - start
-    _logger.info("exported %d vectors in %.1f s", len(rows), export_seconds)
 
     layouts = []
     for path in args.collective:
         config = load_config(path)
-        pipeline = RAGPipeline(config)
-        pipeline.vector_store.create_or_open(config.vector_store.collection)
-        if pipeline.vector_store.count() != len(rows):
+        # only the layout's STORE is built — never a second pipeline: a
+        # second precomputed provider would duplicate the multi-GB
+        # vector table for nothing (the baseline's encoder is shared)
+        store = build_vector_store(config, base.embedding_provider)
+        store.create_or_open(config.vector_store.collection)
+        if store.count() != base.vector_store.count():
             raise SystemExit(
-                f"{path}: {pipeline.vector_store.count()} vectors but the"
-                f" baseline holds {len(rows)} — not the same index content"
+                f"{path}: {store.count()} vectors but the baseline"
+                f" holds {base.vector_store.count()} — not the same"
+                " index content"
             )
         # share the baseline's query encoder: same vector for all three
         # answers by construction, one model load
-        retriever = build_retriever(config, base.embedding_provider, pipeline.vector_store)
-        layouts.append((path, config, pipeline, retriever))
+        retriever = build_retriever(config, base.embedding_provider, store)
+        layouts.append((path, config, store, retriever))
+
+    # exact reference: one streaming pass for every query at once — the
+    # corpus is never materialised (a 1.36M-vector corpus as Python
+    # lists is tens of GB and was OOM-killed)
+    vectors = {
+        query["query_id"]: base.embedding_provider.embed_query(query["query"])
+        for query in queries
+    }
+    vector_count = 0
+
+    def counted():
+        nonlocal vector_count
+        for row in base.vector_store.iter_vectors():
+            vector_count += 1
+            yield row
+
+    start = time.perf_counter()
+    exacts = exact_top_k_many(vectors, counted(), k)
+    exact_pass_seconds = time.perf_counter() - start
+    _logger.info(
+        "exact reference over %d vectors in %.1f s (streaming)",
+        vector_count, exact_pass_seconds,
+    )
 
     baseline_vs_exact = []
     per_layout = {path: [] for path, *_ in layouts}
-    classifications = {path: [] for path, *_ in layouts}
-    exact_seconds = []
     for query in queries:
-        vector = base.embedding_provider.embed_query(query["query"])
-        start = time.perf_counter()
-        exact = exact_top_k(vector, rows, k)
-        exact_seconds.append(time.perf_counter() - start)
+        exact = exacts[query["query_id"]]
         baseline = base.query(query["query"], k=k, retrieval_only=True).sources
         baseline_vs_exact.append(
             {"query_id": query["query_id"], **compare(baseline, exact, k)}
@@ -158,12 +180,14 @@ def main(argv: list[str] | None = None) -> int:
     payload = {
         "experiment": "collective-correctness",
         "k": k,
-        "vectors": len(rows),
+        "vectors": vector_count,
         "queries": len(queries),
         "exact_reference": {
-            "method": "brute-force cosine over every stored vector (pure Python)",
-            "export_seconds": round(export_seconds, 3),
-            "mean_seconds_per_query": round(sum(exact_seconds) / len(exact_seconds), 4),
+            "method": (
+                "brute-force cosine over every stored vector, one"
+                " streaming pass for all queries (pure Python)"
+            ),
+            "pass_seconds": round(exact_pass_seconds, 3),
         },
         "baseline_vs_exact": {
             "summary": summarize(baseline_vs_exact),
@@ -175,14 +199,14 @@ def main(argv: list[str] | None = None) -> int:
                 "partitions": config.retrieval.partitions,
                 "workers": config.retrieval.workers,
                 "executor": config.retrieval.executor,
-                "partition_counts": pipeline.vector_store.partition_counts(),
+                "partition_counts": store.partition_counts(),
                 "vs_baseline": summarize([e["vs_baseline"] for e in per_layout[path]]),
                 "vs_exact": summarize([e["vs_exact"] for e in per_layout[path]]),
                 "differences": totals(per_layout[path]),
                 "per_query": per_layout[path],
                 "config_values": run_manifest(config)["config"],
             }
-            for path, config, pipeline, _ in layouts
+            for path, config, store, _ in layouts
         ],
         "manifest": run_manifest(base_config),
     }

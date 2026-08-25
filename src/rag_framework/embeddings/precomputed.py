@@ -28,6 +28,7 @@ one embedding space (spec section 10). Without a configured delegate,
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 
@@ -37,6 +38,8 @@ import pyarrow.parquet as pq
 
 from rag_framework.embeddings.base import EmbeddingError, EmbeddingProvider
 from rag_framework.models import Chunk
+
+_logger = logging.getLogger(__name__)
 
 _EMBEDDINGS_NAME = re.compile(r"^metadata_\d+_embeddings\.parquet$")
 _COLUMNS = ["record_id", "chunk_idx", "embedding"]
@@ -76,6 +79,7 @@ class PrecomputedEmbeddingProvider(EmbeddingProvider):
             )
 
         tables = []
+        file_of_row: list[Path] = []
         reference_schema = None
         reference_file = None
         for file in files:
@@ -105,6 +109,7 @@ class PrecomputedEmbeddingProvider(EmbeddingProvider):
                     " (mixed corpus versions?)"
                 )
             tables.append(shard)
+            file_of_row.extend([file] * shard.num_rows)
 
         try:
             table = pa.concat_tables(tables)
@@ -141,16 +146,34 @@ class PrecomputedEmbeddingProvider(EmbeddingProvider):
         index: dict[tuple[str, int], int] = {}
         record_ids = table.column("record_id").to_pylist()
         chunk_idxs = table.column("chunk_idx").to_pylist()
+        # a key seen twice in ONE file is corruption and raises; the
+        # same key in different files is a legitimate recrawl (multi-day
+        # corpora republish unchanged documents — record ids are content
+        # hashes, so the text behind both vectors is identical): the
+        # first occurrence wins, mirroring the loader, and the count is
+        # reported so no report can silently absorb it (Rule 6)
+        self.duplicate_vectors_skipped = 0
         for row, key in enumerate(zip(record_ids, chunk_idxs)):
             if key[0] is None or key[1] is None:
                 raise EmbeddingError(
                     f"embeddings row {row} has a null record_id/chunk_idx"
                 )
             if key in index:
-                raise EmbeddingError(
-                    f"duplicate vector for record {key[0]} chunk {key[1]}"
-                )
+                if file_of_row[index[key]] == file_of_row[row]:
+                    raise EmbeddingError(
+                        f"duplicate vector for record {key[0]} chunk"
+                        f" {key[1]} within {file_of_row[row]}"
+                    )
+                self.duplicate_vectors_skipped += 1
+                continue
             index[key] = row
+        if self.duplicate_vectors_skipped:
+            _logger.warning(
+                "embeddings under %s: %d duplicate (record, chunk) row(s)"
+                " across files — recrawled documents; first occurrence kept",
+                root,
+                self.duplicate_vectors_skipped,
+            )
         self._index = index
         # vectors stay in the fp16 arrow column (~13 MB for the full
         # slice); they are converted to python floats per lookup
