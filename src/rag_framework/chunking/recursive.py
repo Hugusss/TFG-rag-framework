@@ -38,7 +38,8 @@ class RecursiveChunker(Chunker):
         # the config seam validates these for pipeline use; this guard
         # covers direct construction and must survive python -O (an
         # invalid stride would silently produce zero windows — the
-        # Rule-6 failure mode), so it is a real raise, not an assert
+        # failure this project set out to avoid), so it is a real raise,
+        # not an assert
         if target_tokens < 1 or not 0 <= overlap_tokens < target_tokens:
             raise ValueError(
                 f"invalid chunking geometry: target={target_tokens},"

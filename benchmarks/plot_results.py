@@ -6,8 +6,23 @@ and the git commit recorded in its manifest. A missing source is an
 error, never a placeholder figure.
 
 Reads: results/*.json. Writes: figures/01-*.png .. figures/08-*.png.
+``--no-source-stamp`` omits that footer for figures destined to a
+document that cites its sources in prose; the stamp is on by default
+because a figure that travels alone must carry its own provenance.
 Requires the optional ``plots`` extra; the framework itself never
 imports matplotlib (ADR-012).
+
+Each figure takes the newest result file of its kind, so a later
+campaign of the same kind would silently redraw it at another scale.
+The eight published figures all describe the main corpus, and this is
+the command that regenerates them:
+
+    python benchmarks/plot_results.py \
+        --pin scaling-workers=scaling-workers-20260821T143459.302145Z.json \
+        --pin correctness=correctness-20260821T141643.871410Z.json
+
+Without those pins the two files from the full-scale campaign win and
+figures 3 and 7 come out at 1.36M vectors instead.
 """
 
 from __future__ import annotations
@@ -34,16 +49,45 @@ SERIAL = {"color": "#7f7f7f", "marker": "D"}
 # --- result discovery --------------------------------------------------------
 
 
+# set by main(); maps a result kind to the exact file chosen with --pin
+PINNED: dict[str, str] = {}
+
+
 def latest(results: Path, kind: str) -> Path:
-    """Newest ``<kind>-<timestamp>.json`` (timestamps sort lexically)."""
+    """The one result file for ``kind``, or the one ``--pin`` selects.
+
+    Picking the newest of several candidates would be a convenience with a
+    trap in it: a later campaign of the same kind becomes the source without
+    saying so, and the figure quietly changes what it means — same title,
+    same axes, another corpus. So ambiguity is an error here, and ``--pin``
+    is how a figure states which run it draws.
+    """
+    if kind in PINNED:
+        path = results / PINNED[kind]
+        if not path.is_file():
+            raise SystemExit(f"pinned {kind} file not found: {path}")
+        return path
     files = sorted(results.glob(f"{kind}-*.json"))
     if not files:
         raise SystemExit(f"no {kind}-*.json under {results}; run the benchmark first")
-    return files[-1]
+    if len(files) > 1:
+        listing = "\n  ".join(f.name for f in files)
+        raise SystemExit(
+            f"{len(files)} {kind}-*.json files under {results}; refusing to guess.\n"
+            f"  {listing}\n"
+            f"Campaigns of the same kind can differ in corpus and scale, so picking "
+            f"one silently would change what the figure means. Choose with "
+            f"--pin {kind}=<file>."
+        )
+    return files[0]
 
 
 def load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+# set by main(); when False, finish() draws no provenance footer
+SOURCE_STAMP = True
 
 
 def stamp(payload: dict, path: Path) -> str:
@@ -66,8 +110,11 @@ def range_bars(summary: dict, scale: float = 1000.0):
 def finish(fig, axis, title: str, source: str, output: Path, name: str) -> Path:
     axis.set_title(title)
     axis.grid(True, alpha=0.3)
-    fig.text(0.99, 0.01, source, ha="right", va="bottom", fontsize=6, color="#555555")
-    fig.tight_layout(rect=(0, 0.02 + 0.025 * source.count("\n"), 1, 1))
+    if SOURCE_STAMP:
+        fig.text(0.99, 0.01, source, ha="right", va="bottom", fontsize=6, color="#555555")
+        fig.tight_layout(rect=(0, 0.02 + 0.025 * source.count("\n"), 1, 1))
+    else:
+        fig.tight_layout()
     path = output / name
     fig.savefig(path, dpi=150)
     plt.close(fig)
@@ -210,8 +257,11 @@ def plot_worker_time_distribution(results: Path, output: Path) -> Path:
     left.set_title("Worker-time distribution per partition (collective)"); left.legend(fontsize=7); left.grid(True, alpha=0.3)
     right.set_xlabel("partition index"); right.set_ylabel("vectors in partition")
     right.set_title("Partition sizes (document-hash assignment)"); right.legend(fontsize=7); right.grid(True, alpha=0.3)
-    fig.text(0.99, 0.01, stamp(payload, path), ha="right", va="bottom", fontsize=7, color="#555555")
-    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    if SOURCE_STAMP:
+        fig.text(0.99, 0.01, stamp(payload, path), ha="right", va="bottom", fontsize=7, color="#555555")
+        fig.tight_layout(rect=(0, 0.03, 1, 1))
+    else:
+        fig.tight_layout()
     out = output / "05-worker-time-distribution.png"
     fig.savefig(out, dpi=150); plt.close(fig)
     return out
@@ -310,7 +360,27 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--results", default="./results")
     parser.add_argument("--output", default="./figures")
     parser.add_argument("--only", nargs="+", type=int, choices=sorted(PLOTS), help="plot numbers to regenerate (default: all)")
+    parser.add_argument(
+        "--no-source-stamp",
+        action="store_true",
+        help="omit the source-file footer (for figures embedded in a document)",
+    )
+    parser.add_argument(
+        "--pin",
+        action="append",
+        default=[],
+        metavar="KIND=FILE",
+        help="pin a result kind to one file, e.g. --pin correctness=correctness-X.json "
+        "(repeatable); without it each kind uses its newest file",
+    )
     args = parser.parse_args(argv)
+    global SOURCE_STAMP
+    SOURCE_STAMP = not args.no_source_stamp
+    for pin in args.pin:
+        kind, _, name = pin.partition("=")
+        if not kind or not name:
+            raise SystemExit(f"--pin expects KIND=FILE, got {pin!r}")
+        PINNED[kind] = name
     results, output = Path(args.results), Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     for number in args.only or sorted(PLOTS):

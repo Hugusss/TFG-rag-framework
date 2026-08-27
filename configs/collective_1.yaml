@@ -3,7 +3,7 @@
 # vectors as local_chroma.yaml, in one collection named
 # <collection>-p00of01, searched through the executor and merged —
 # the same code path as P = 8, so the two are comparable. A local
-# simulation of collective retrieval (spec section 13.2), not a
+# simulation of collective retrieval, not a
 # distributed system.
 #
 # Each partition count gets its own store directory so index sizes

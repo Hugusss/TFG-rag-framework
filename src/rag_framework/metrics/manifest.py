@@ -161,7 +161,8 @@ def build_query_payload(pipeline, result) -> dict:
 
     ``result`` is a RAGResult; sources are recorded as compact rows
     (ids, score, provenance) — full texts live in the store, not in
-    every report. Deferred section-22 fields until the benchmark
+    every report. Deferred the remaining reproducibility fields
+    until the benchmark
     runner exists: experiment id and query id (single ad-hoc queries
     have neither); failed queries write no report — failures live in
     logs and exit codes.

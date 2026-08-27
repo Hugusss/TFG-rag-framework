@@ -5,8 +5,9 @@ chunking, embeddings, a replaceable vector-store backend (ChromaDB first),
 sequential and partitioned-collective retrieval, optional generation, and
 reproducible benchmarks.
 
-Research question: *can a local implementation evolve into a serverless,
-distributed one by replacing components instead of rewriting the application?*
+Design goal: a modular, extensible RAG library that runs at small scale
+on one machine and is ready to scale out later by replacing components,
+without rewriting the application.
 
 ## Setup
 
@@ -15,7 +16,7 @@ Requires Python ≥ 3.12 and a Linux/macOS environment.
 ```bash
 python -m venv .venv
 .venv/bin/pip install -e ".[dev]"        # add ",plots" to regenerate figures
-.venv/bin/python -m pytest               # 383 tests, no dataset needed
+.venv/bin/python -m pytest               # 408 tests, no dataset needed
 ```
 
 ## Data
@@ -44,7 +45,8 @@ for query encoding, ~600 MB, one time):
   --retrieval-only --k 5
 ```
 
-Every run writes a JSON report under `results/` carrying the effective
+Every run writes a JSON report under `metrics.output` (`./results` in
+every shipped configuration) carrying the effective
 configuration, git commit, machine, dependency versions, and dataset
 version, so any result can be reproduced.
 
@@ -66,14 +68,28 @@ over local collections), measured, not a distributed system.
 
 ### Experiments and figures
 
-`benchmarks/` holds one script per experiment — dataset-size scaling,
-partition and worker scaling, chunk-size effect, collective correctness
-against an exact brute-force reference — and `plot_results.py`, which
-regenerates `figures/` from the committed raw results. Commands,
-measurement policy and caveats: `docs/experiment-guide.md`.
+`benchmarks/` holds one script per experiment: dataset-size scaling,
+partition and worker scaling, chunk-size effect, corpus-growth quality
+and collective correctness against an exact brute-force reference. Plus
+`plot_results.py`, which regenerates `figures/` from the committed raw
+results:
+
+```bash
+.venv/bin/python benchmarks/plot_results.py \
+    --pin scaling-workers=scaling-workers-20260821T143459.302145Z.json \
+    --pin correctness=correctness-20260821T141643.871410Z.json
+```
+
+The pins are not optional. Two kinds have a second committed campaign
+at 1.36M vectors, and the script refuses to guess which one a figure
+draws. Commands, measurement policy and caveats:
+`docs/experiment-guide.md`.
 
 ## Documentation
 
+- `docs/usage.md` — how to drive the pipeline from Python and from the
+  command line, and every configuration key with its type, default and
+  the combinations that are refused.
 - `docs/architecture.md` — seams, data flow, boundaries, validation,
   what is and is not claimed.
 - `docs/experiment-guide.md` — reproducing every experiment and figure.
@@ -82,7 +98,8 @@ measurement policy and caveats: `docs/experiment-guide.md`.
 - `docs/limitations.md` — measured limits of scope, performance, data
   and evaluation.
 - `docs/dataset.md` — the corpus, its quirks and how to obtain it.
-- `docs/decisions/` — architecture decision records.
+- `docs/decisions/` — the thirteen architecture decision records, with
+  an index in `docs/decisions/README.md`.
 
 ## Layout
 
@@ -91,9 +108,11 @@ measurement policy and caveats: `docs/experiment-guide.md`.
   `retrieval/`, `executors/`, `generation/`, `orchestration/`,
   `metrics/`. Each component sits behind a small interface; backends
   are selected in `configs/*.yaml`.
-- `configs/` — pipeline configurations (sequential baseline and
-  collective layouts for 1, 2, 4, 8 partitions). `benchmarks/` —
-  experiment and plot scripts. `evaluation/` — the evaluation query
-  set. `results/` — committed raw run reports. `figures/` —
-  regenerated plots. `tests/` — unit and integration suites (no
-  dataset required).
+- `configs/` — ten pipeline configurations: the sequential baseline,
+  collective layouts for 1, 2, 4 and 8 partitions, two larger corpora,
+  two search widths at full scale and one with real generation. What
+  each one demonstrates: `docs/usage.md`. `benchmarks/` — experiment
+  and plot scripts. `evaluation/` — the evaluation query set.
+  `results/` — committed raw run reports. `figures/` — regenerated
+  plots. `tests/` — unit and integration suites (no dataset
+  required).

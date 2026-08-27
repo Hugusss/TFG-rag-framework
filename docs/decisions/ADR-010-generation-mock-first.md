@@ -1,5 +1,9 @@
 # ADR-010 — Generation: mock-first, real backend deferred
 
+Status: extended by ADR-013, which added the real Ollama generator beside
+the mock. The reasoning below still explains why the mock came first and
+why it remains the default.
+
 Increment: generation
 
 ## Problem

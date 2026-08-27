@@ -54,7 +54,7 @@ retrieval mode).
 
 ## Consequences
 
-- ~280 explicit lines we own and unit-test (37 tests), instead of a
+- ~390 explicit lines we own and unit-test (45 tests), instead of a
   dependency. Adding a config field means touching `config.py` and its
   tests — deliberate friction: every new experimental knob is reviewed.
 - Validation boundaries are fixed and documented in the module docstring:

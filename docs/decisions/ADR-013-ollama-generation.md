@@ -1,5 +1,8 @@
 # ADR-013 — Real generation through Ollama; model choice
 
+Status: extends ADR-010, which shipped the deterministic mock first. The
+mock remains the default; this record adds the real model beside it.
+
 Increment: Ollama generator
 
 ## Problem

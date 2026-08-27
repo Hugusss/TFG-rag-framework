@@ -2,7 +2,7 @@
 # and precomputed vectors as local_chroma.yaml, ingested into one Chroma
 # collection per partition (named <collection>-pNNof02) and searched by
 # 2 threads with a global top-k merge. A local simulation of collective
-# retrieval (spec section 13.2), not a distributed system.
+# retrieval, not a distributed system.
 #
 # Each partition count gets its own store directory so index sizes
 # are measured per layout; the baseline collection lives in ./state/chroma.

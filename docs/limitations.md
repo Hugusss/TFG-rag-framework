@@ -4,7 +4,7 @@ Stated as measured on the evaluation corpus (OWI v2.0.0, Spanish,
 2026-07-28: 2,363 documents, 6,240 official chunks) on one laptop
 (8 threads, 32 GB), unless noted.
 
-**Scope and deployment**
+## Scope and deployment
 
 - The collective mode is a **local simulation**: P Chroma collections
   on one machine, searched by threads. Nothing here has run across
@@ -33,7 +33,7 @@ Stated as measured on the evaluation corpus (OWI v2.0.0, Spanish,
   bit-reproducible across hardware. Retrieval-only operation remains
   the measured path.
 
-**Performance**
+## Performance
 
 - At 1.36M vectors (25 GB index) the machine leaves the in-memory
   regime: single-collection search rises from ~3 ms to 65–74 ms
@@ -43,7 +43,6 @@ Stated as measured on the evaluation corpus (OWI v2.0.0, Spanish,
   retrieval on one machine never beats the monolith at any measured
   scale; the per-partition numbers are the measured case for
   distributing memory across machines, which this project does not do.
-
 
 - **Query encoding dominates latency** (~85 ms of ~90 ms on CPU), so no
   retrieval-mode change moves end-to-end latency by more than a few
@@ -58,7 +57,7 @@ Stated as measured on the evaluation corpus (OWI v2.0.0, Spanish,
   configurations were produced once and one configuration used a
   partial embedding cache (declared in its report).
 
-**Data and evaluation**
+## Data and evaluation
 
 - The official publisher chunks cover **66 % of the text** (a five-window
   cap per document); the self-chunked configurations cover all of it.
@@ -80,16 +79,19 @@ Stated as measured on the evaluation corpus (OWI v2.0.0, Spanish,
 - Unanswerable queries' top scores (0.29–0.55) **overlap** answerable
   ones; no score threshold separates them.
 
-**Correctness and measurement**
+## Correctness and measurement
 
 - Vector search is **approximate** (HNSW), and the cost of the default
-  search width grows with scale: queries losing true neighbours went
-  from 1/30 (6k vectors) to 4/30 (63k) to 8/30 (1.36M) at
-  `ef_search=100`. Raising the width (`vector_store.ef_search`, 800)
-  restored exact-reference agreement at document level on every corpus
-  measured, at 1.1–2× search latency; at 1.36M a small chunk-level gap
-  remains (overlap 0.977 monolithic, 0.990 partitioned). Smaller
-  per-partition graphs are consistently more exact at equal `ef`.
+  search width grows with scale: at the backend default width, queries
+  losing true neighbours went from 1/30 at 6k vectors to 8/30 at 1.36M,
+  where measured recall (0.834) fell below the exact reference (0.848).
+  Raising the width (`vector_store.ef_search`, 800) restored
+  exact-reference agreement at document level on every corpus measured,
+  at 1.1–2× search latency, and brought 1.36M down to 4/30 affected
+  queries; the 63k corpus was only ever measured at 800, where it loses
+  nothing (0/30). At 1.36M a small chunk-level gap remains at equal
+  width (overlap 0.977 monolithic, 0.990 partitioned): smaller
+  per-partition graphs are consistently more exact.
 - Index-size numbers are only comparable between **freshly built**
   indexes; a re-ingested directory carries storage history.
 - Several result files carry a `-dirty` git commit, meaning the working

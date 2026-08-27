@@ -10,6 +10,13 @@ pytest.importorskip("matplotlib")
 
 REPO = Path(__file__).resolve().parents[2]
 
+# The two kinds with more than one committed campaign: the published figures
+# describe the main corpus, so they pin its run (the other is the 1.36M one).
+PINS = [
+    "--pin", "scaling-workers=scaling-workers-20260821T143459.302145Z.json",
+    "--pin", "correctness=correctness-20260821T141643.871410Z.json",
+]
+
 
 def load_module():
     spec = importlib.util.spec_from_file_location("plot_results", REPO / "benchmarks" / "plot_results.py")
@@ -19,14 +26,30 @@ def load_module():
 
 
 class TestDiscovery:
-    def test_latest_picks_the_newest_timestamp(self, tmp_path):
+    def test_one_candidate_needs_no_pin(self, tmp_path):
         module = load_module()
-        for stamp in ("20260101T000000Z", "20260301T000000Z", "20260201T000000Z"):
-            (tmp_path / f"correctness-{stamp}.json").write_text("{}")
-        (tmp_path / "correctness-extra-20260901T000000Z.json").write_text("{}")
-        assert module.latest(tmp_path, "correctness").name == "correctness-extra-20260901T000000Z.json"
-        (tmp_path / "correctness-extra-20260901T000000Z.json").unlink()
+        (tmp_path / "correctness-20260301T000000Z.json").write_text("{}")
         assert module.latest(tmp_path, "correctness").name == "correctness-20260301T000000Z.json"
+
+    def test_several_candidates_are_an_error_not_a_guess(self, tmp_path):
+        module = load_module()
+        for stamp in ("20260101T000000Z", "20260301T000000Z"):
+            (tmp_path / f"correctness-{stamp}.json").write_text("{}")
+        with pytest.raises(SystemExit, match="refusing to guess"):
+            module.latest(tmp_path, "correctness")
+
+    def test_pin_selects_the_run_and_a_missing_pin_is_an_error(self, tmp_path):
+        module = load_module()
+        for stamp in ("20260101T000000Z", "20260301T000000Z"):
+            (tmp_path / f"correctness-{stamp}.json").write_text("{}")
+        module.PINNED["correctness"] = "correctness-20260101T000000Z.json"
+        try:
+            assert module.latest(tmp_path, "correctness").name == "correctness-20260101T000000Z.json"
+            module.PINNED["correctness"] = "correctness-does-not-exist.json"
+            with pytest.raises(SystemExit, match="pinned correctness file not found"):
+                module.latest(tmp_path, "correctness")
+        finally:
+            module.PINNED.clear()
 
     def test_missing_source_is_an_error_not_a_placeholder(self, tmp_path):
         module = load_module()
@@ -47,7 +70,7 @@ class TestDiscovery:
 class TestRender:
     def test_every_required_plot_renders_from_committed_results(self, tmp_path):
         module = load_module()
-        assert module.main(["--results", str(REPO / "results"), "--output", str(tmp_path)]) == 0
+        assert module.main(["--results", str(REPO / "results"), "--output", str(tmp_path), *PINS]) == 0
         names = sorted(p.name for p in tmp_path.glob("*.png"))
         assert names == [
             "01-ingestion-time-vs-chunks.png",

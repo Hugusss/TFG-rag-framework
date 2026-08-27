@@ -14,8 +14,12 @@ existing seam, and `RAGPipeline.ingest()` / `query()` did not change.
 ## 1. Seams
 
 Seven **substitutable seams** carry the data path. Each is a small
-interface with at least two implementations, chosen by name in the
-configuration.
+interface with at least two implementations. Most are chosen by name in
+the configuration; two decorators are reached another way, because they
+wrap an implementation rather than replace it: the corpus sampler
+switches on when `dataset.sample_percent` is below 100, and the
+embedding cache has no configuration name at all and is applied from
+Python.
 
 | seam | package | interface | implementations | typed failure |
 |---|---|---|---|---|

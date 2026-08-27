@@ -13,7 +13,9 @@ and short lists, duplicate chunk ids, tied scores and invalid scores
 with a deterministic order. Changing either rule later invalidates every
 existing partitioned collection and every comparison made with it.
 
-## Decision 1 — `partition_id = sha256(document_id)[:8] mod P`
+## Decision 1 — `partition_id = int(sha256(document_id)[:8 bytes]) mod P`
+
+The eight are bytes of the digest read big-endian, not hex characters.
 
 Options: (a) Python `hash(document_id)`, the obvious reading;
 (b) SHA-256 of the UTF-8 id, first 8 bytes as an integer, mod P;

@@ -7,7 +7,7 @@ A second day (2026-08-08) is held locally as an independent check that the
 pipeline is day-agnostic; it is not part of the pinned corpus.
 
 All numbers below were computed from the raw files with this repository's
-loader and chunker (commit `efd7879`, 2026-08-17) and are reproducible by
+loader and chunker (2026-08-17) and are reproducible by
 re-running them over `data/owi/`.
 
 ## 1. File formats and layout
@@ -154,6 +154,25 @@ Publication cadence (checked 2026-08-12): near-daily `gpu.owie` datasets
 from it4i since 2026-07-28, 210k–1.2M records per day across all
 languages. Occasional zero-byte orphan catalogue entries exist (e.g. two
 on 2026-07-31); verify record counts after pulling.
+
+### The larger corpora
+
+Four configurations use corpora bigger than the pinned day, and they are
+built the same way, only pulling more:
+
+- `./data/owi-spa-growth` (`spa_growth.yaml`): the Spanish partition of
+  every day between 2026-07-28 and 2026-08-13 that publishes both
+  resources. Pull each day into the same tree; the loader pairs shards
+  recursively and the vector provider keeps the first copy of a chunk
+  seen across files, counting the recrawled duplicates. Result: 22,227
+  unique documents and 63,281 vectors.
+- `./data/owi-fullday-0728` (`fullday_0728*.yaml`): the whole pinned day
+  without the `--language` filter, all 75 languages. Result: 520,987
+  documents and 1,361,288 vectors, and a 25 GB index once ingested, so
+  check the disk before starting.
+
+Both contain the pinned Spanish day, which is what keeps the evaluation
+set valid across them.
 
 **Official embeddings exist only for the `gpu` collection** (verified
 over 30 days of it4i publications, 2026-08-17: `gpu.owie` is the sole

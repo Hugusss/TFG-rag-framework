@@ -40,10 +40,14 @@ below before re-ingesting into a directory you intend to measure.
 | B — partition scaling, C — worker scaling | `benchmarks/run_scaling.py` (`--experiment partitions\|workers\|both`) | `scaling-partitions`, `scaling-workers` | ~5 min |
 | D — chunk-size effect | `benchmarks/run_chunking.py` | `chunkexp-<configuration>` | seconds for `publisher`; **2.5–4 h of CPU encoding per self-chunked configuration** |
 | E — collective correctness | `benchmarks/run_correctness.py` | `correctness` | ~1 min |
+| corpus growth — quality, exactness and search latency per corpus and search width | `benchmarks/run_quality.py` | `quality-<label>` | minutes at 6k; ~20 min per pass at 1.36M |
 | figures | `benchmarks/plot_results.py` | `figures/NN-*.png` | seconds |
 
-All scripts accept `--queries`, `--output`, `--k`, and where relevant
-`--repetitions` and `--warm-up`; run any with `-h`.
+The experiment scripts accept `--queries`, `--output` and `--k`; the
+scaling and quality ones also take `--repetitions` and `--warm-up`,
+while chunking fixes both in code. `plot_results.py` is the exception:
+its flags are `--results`, `--output`, `--only`, `--no-source-stamp`
+and `--pin`. Run any script with `-h`.
 
 Experiment D notes: the script runs **one child process per
 configuration** (hours of CPU encoding fragment the allocator without
@@ -109,9 +113,24 @@ Every result file records what was measured and how:
 - `chunkexp-*.json`, `scaling-*.json`, `correctness-*.json`: one file
   per experiment run; `rows` / `layouts` hold per-configuration blocks;
   per-query detail is kept so any aggregate can be recomputed.
+- `quality-*.json`: one file per corpus and search width, with the
+  measured quality beside the exact brute-force reference
+  (`exact_mean_recall_at_k`), an `exactness` block holding the mean
+  top-k overlap and how many queries fall below full overlap, and the
+  `ef_search` actually used. These are the files behind the
+  corpus-growth argument in `limitations.md`.
 - Committed files under `results/` are the runs the figures and the
-  report quote; `python benchmarks/plot_results.py` uses the latest
-  file of each kind.
+  report quote. `plot_results.py` takes one file per kind and refuses
+  to guess when several exist, because two campaigns of the same kind
+  can differ in corpus and scale — a figure would change meaning
+  without changing its title. Two kinds have two campaigns each
+  (`scaling-workers`, `correctness`: the main corpus and the 1.36M
+  one), so the committed figures, which all describe the main corpus,
+  are regenerated with:
+
+      python benchmarks/plot_results.py \
+      --pin scaling-workers=scaling-workers-20260821T143459.302145Z.json \
+      --pin correctness=correctness-20260821T141643.871410Z.json
 
 ## 5. Caveats that travel with the numbers
 

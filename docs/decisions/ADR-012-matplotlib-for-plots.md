@@ -42,5 +42,9 @@ instruction if it is missing; the test module skips cleanly without it.
   `python benchmarks/plot_results.py` and committed (small) so the
   handover and the thesis draw from one source; editing a PNG by hand
   is never allowed — change the results or the script.
-- The script picks the latest result file of each kind by default; a
-  missing kind is an error, never a placeholder figure.
+- The script takes one result file per kind; a missing kind is an
+  error, never a placeholder figure, and so is an ambiguous one. When
+  a kind has several committed campaigns the run must be named with
+  `--pin`: choosing the newest silently would let a later campaign at
+  another scale redraw a figure whose caption still describes the old
+  one. The guide records the exact command for the committed set.
