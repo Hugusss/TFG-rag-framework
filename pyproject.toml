@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Modular Collective RAG Pipeline over the Open Web Index (OWI)"
 readme = "README.md"
 requires-python = ">=3.12"
-authors = [{ name = "Hugo Miranda" }]
+authors = [{ name = "Hugo Miranda Serrano" }]
 # Runtime dependencies are added together with the component that first
 # needs them, so every addition is traceable to a seam.
 dependencies = [
@@ -16,12 +16,12 @@ dependencies = [
     "pyarrow>=25,<26",   # owi loader seam
     "chromadb>=1.5,<1.6",  # chroma vector-store seam; pinned minor (behavior drift risk), exact version in run manifests
     "sentence-transformers>=5,<6",  # live jina-v5 encoder (embeddings seam)
-    "peft>=0.17,<1",     # required by the jina-v5 model code (ADR-009)
+    "peft>=0.17,<1",     # required by the jina-v5 model code
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=9,<10"]
-plots = ["matplotlib>=3.9,<4"]  # benchmarks/plot_results.py only; never imported by the framework (ADR-012)
+plots = ["matplotlib>=3.9,<4"]  # benchmarks/plot_results.py only; never imported by the framework
 
 [tool.setuptools.packages.find]
 where = ["src"]

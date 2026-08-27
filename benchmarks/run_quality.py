@@ -59,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
     vectors = {q["query_id"]: pipeline.embedding_provider.embed_query(q["query"]) for q in queries}
 
     # exact reference: ONE streaming pass over the stored vectors for
-    # all queries at once — the corpus is never materialised, so this
+    #all queries at once, the corpus is never materialised; so this
     # scales to millions of vectors (a list of python floats would not)
     vector_count = 0
     indexed_docs: set[str] = set()

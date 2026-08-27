@@ -46,7 +46,7 @@ _TEXT_COLUMNS = ["id", "url", "title", "main_content", "language"]
 class _Shard:
     records_file: Path
     text_file: Path
-    partition: tuple[str, ...]  # e.g. ("year=2026", ..., "language=spa")
+    partition: tuple[str, ...]  #e.g ("year=2026", ..., "language=spa")
     index: int
 
 
@@ -88,7 +88,7 @@ class OwiLoader(DocumentLoader):
         self.rejections = []
         self.duplicates_skipped = 0
         root = Path(source)
-        # discovery is eager so structural problems raise here, not on
+        #discovery is eager so structural problems raise here, not on
         # the first next() somewhere inside the ingestion loop
         shards = self._discover(root)
         return self._iter_documents(root, shards)
@@ -109,7 +109,7 @@ class OwiLoader(DocumentLoader):
             else:
                 continue
             # the pairing key spans dataset directories on purpose, so a
-            # second file with the same key would silently shadow the
+            #second file with the same key would silently shadow the
             # real one, and a mispaired corpus must fail loudly
             if key in target:
                 raise LoaderError(
@@ -158,8 +158,8 @@ class OwiLoader(DocumentLoader):
             text = pq.read_table(shard.text_file, columns=_TEXT_COLUMNS)
         except (OSError, ValueError) as error:
             # schema was pre-validated; this catches data corruption
-            # discovered only while decoding pages — still LoaderError,
-            # never a bare backend exception
+            # discovered only while decoding pages,still LoaderError,
+            #never a bare backend exception
             raise LoaderError(
                 f"failed reading shard {shard.records_file} / "
                 f"{shard.text_file}: {error}"
@@ -216,7 +216,7 @@ class OwiLoader(DocumentLoader):
                 "source_text_file": text_ref,
                 "ingestion_version": __version__,
             }
-            # missing values are absent keys, never invented placeholders
+            #missing values are absent keys, never invented placeholders
             if url:
                 metadata["url"] = url
             if title:
@@ -229,5 +229,5 @@ class OwiLoader(DocumentLoader):
             seen.add(record_id)
             # the publisher id is adopted verbatim rather than re-hashed
             # (ADR-001): it is already a content hash, and keeping it makes
-            # every official artifact directly joinable
+            #every official artifact directly joinable
             yield Document(document_id=record_id, text=main_content, metadata=metadata)

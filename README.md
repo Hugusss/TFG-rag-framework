@@ -14,8 +14,8 @@ Requires Python ≥ 3.12 and a Linux/macOS environment.
 
 ```bash
 python -m venv .venv
-.venv/bin/pip install -e ".[dev]"
-.venv/bin/python -m pytest        # 191 tests, no dataset needed
+.venv/bin/pip install -e ".[dev]"        # add ",plots" to regenerate figures
+.venv/bin/python -m pytest               # 383 tests, no dataset needed
 ```
 
 ## Data
@@ -48,13 +48,52 @@ Every run writes a JSON report under `results/` carrying the effective
 configuration, git commit, machine, dependency versions, and dataset
 version, so any result can be reproduced.
 
+### Collective mode
+
+The same corpus can be ingested into P partitions — one collection per
+partition, documents assigned by a stable hash — and searched by P
+workers with a global top-k merge. It is a config change only:
+
+```bash
+.venv/bin/python -m rag_framework ingest --config configs/collective_4.yaml
+.venv/bin/python -m rag_framework query --config configs/collective_4.yaml \
+  --question "monumentos de la Alhambra de Granada" --retrieval-only --k 5
+```
+
+Results carry `partition_id` / `worker_id` provenance and per-partition
+timings. This is a *local simulation* of collective retrieval (threads
+over local collections), measured, not a distributed system.
+
+### Experiments and figures
+
+`benchmarks/` holds one script per experiment — dataset-size scaling,
+partition and worker scaling, chunk-size effect, collective correctness
+against an exact brute-force reference — and `plot_results.py`, which
+regenerates `figures/` from the committed raw results. Commands,
+measurement policy and caveats: `docs/experiment-guide.md`.
+
+## Documentation
+
+- `docs/architecture.md` — seams, data flow, boundaries, validation,
+  what is and is not claimed.
+- `docs/experiment-guide.md` — reproducing every experiment and figure.
+- `docs/adding-a-vector-store.md` — the backend contract and the one
+  factory branch to add.
+- `docs/limitations.md` — measured limits of scope, performance, data
+  and evaluation.
+- `docs/dataset.md` — the corpus, its quirks and how to obtain it.
+- `docs/decisions/` — architecture decision records.
+
 ## Layout
 
 - `src/rag_framework/` — the library: `models` (canonical types),
   `config`, `loaders/`, `chunking/`, `embeddings/`, `vectorstores/`,
-  `retrieval/`, `orchestration/`, `metrics/`. Each component sits
-  behind a small interface; backends are selected in `configs/*.yaml`.
-- `configs/` — pipeline configurations. `docs/` — dataset and
-  architecture documentation. `evaluation/` — the evaluation query
-  set. `results/` — committed run reports. `tests/` — unit and
-  integration suites (no dataset required).
+  `retrieval/`, `executors/`, `generation/`, `orchestration/`,
+  `metrics/`. Each component sits behind a small interface; backends
+  are selected in `configs/*.yaml`.
+- `configs/` — pipeline configurations (sequential baseline and
+  collective layouts for 1, 2, 4, 8 partitions). `benchmarks/` —
+  experiment and plot scripts. `evaluation/` — the evaluation query
+  set. `results/` — committed raw run reports. `figures/` —
+  regenerated plots. `tests/` — unit and integration suites (no
+  dataset required).

@@ -44,6 +44,10 @@ The two extra text rows on 07-28 (`07d96745ca…`, `98c583e3c3…`) are pages
 crawled but not embedded; they have no records entry and are therefore
 not corpus members (the records file is authoritative).
 
+Raw parquet size on disk: 28.9 MB (2026-07-28) and 16.8 MB
+(2026-08-08), summed over the records, embeddings and text files of the
+Spanish partition.
+
 ## 3. Metadata fields
 
 Preserved into the canonical model when present: `url`, `title`,
