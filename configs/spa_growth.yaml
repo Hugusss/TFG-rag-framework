@@ -1,0 +1,40 @@
+# Growth corpus: the eight Spanish day-partitions of the gpu collection
+# with complete official vector pairs (2026-07-28 … 2026-08-13). The
+# 07-28 baseline corpus is a strict subset, so the evaluation query set
+# remains valid: quality measured here shows how retrieval holds up as
+# the corpus grows roughly tenfold with distractors. Cross-day
+# recrawls are deduplicated at load (documents) and at the embedding
+# provider (vectors), both counted in reports.
+
+dataset:
+  loader: owi
+  path: ./data/owi-spa-growth
+  version: owi-v2.0.0-gpu-spa-growth-8days-0728to0813
+
+chunking:
+  strategy: publisher_offsets
+
+embedding:
+  provider: precomputed
+  model: jinaai/jina-embeddings-v5-text-small
+  normalize: true
+
+vector_store:
+  type: chroma
+  path: ./state/chroma-spa-growth
+  collection: owi-spagrowth-publisherchunks-jinav5small-v1
+  # the backend's default search width (100) measurably drops true
+  # neighbours at this scale (4/30 queries affected); 800 restores
+  # exact-reference agreement at ~1.5-2x search latency
+  ef_search: 800
+
+retrieval:
+  mode: sequential
+  k: 10
+
+generation:
+  enabled: false
+  provider: mock
+
+metrics:
+  output: ./results

@@ -1,0 +1,113 @@
+{
+  "query": "¿Cómo llegar a la Alhambra de Granada?",
+  "retrieval_mode": "sequential",
+  "collection": "owi-spa0728-publisherchunks-jinav5small-v1",
+  "metrics": {
+    "k": 3,
+    "results_returned": 3,
+    "collection_count": 6240,
+    "embed_seconds": 9.162778670986881,
+    "search_seconds": 0.06855352901038714,
+    "retrieval_seconds": 9.231335304997629,
+    "generation_seconds": 0.000201,
+    "total_seconds": 9.231552
+  },
+  "answer": "[mock answer] Extractive summary of the top 3 retrieved passages:\n[1] (https://www.alhambradegranada.org/es/info/comollegaralaalhambra.asp) a la Alhambra en coche se realiza por la Ronda Sur (A-395) de la ciudad, ya que el transporte privado no tiene permitido el acceso a la Alhambra desde el centro de la ciudad. Debe dirigirse a la…\n[2] (https://www.alhambradegranada.org/es/info/comollegaralaalhambra.asp) 625ijlbzae_3.webp&amp;description=¿Cómo llegar a la Alhambra? - Cómo llegar a la Alhambra\"> Cuesta de Gomérez Cuesta de Gomérez Compartir Visitas guiadas en grupo a la Alhambra de Granada Visitas…\n[3] (https://www.alhambradegranada.org/es/info/comollegaralaalhambra.asp) Inicio / La Alhambra / Visitar La Alhambra / Cómo llegar a la Alhambra « Visitar La Alhambra ¿Cómo llegar a la Alhambra? A la hora de visitar la Alhambra podemos elegir entre un buen número de formas…",
+  "sources": [
+    {
+      "rank": 1,
+      "score": 0.7105174660682678,
+      "chunk_id": "26f5aa2db7f6749d8e54dcf7ad374f03109abe8f990a1edcfd50c66fe496b1ad",
+      "document_id": "c65478a28994ceea6c2efa6ee90d9c2155fe3e25047c68de021f14cc4c701dfb",
+      "url": "https://www.alhambradegranada.org/es/info/comollegaralaalhambra.asp",
+      "position": 3
+    },
+    {
+      "rank": 2,
+      "score": 0.6876636743545532,
+      "chunk_id": "d126589d935d36082fd9d744da39f61144407da5ffdc4b44fe1a39775e3f0d49",
+      "document_id": "c65478a28994ceea6c2efa6ee90d9c2155fe3e25047c68de021f14cc4c701dfb",
+      "url": "https://www.alhambradegranada.org/es/info/comollegaralaalhambra.asp",
+      "position": 4
+    },
+    {
+      "rank": 3,
+      "score": 0.656184196472168,
+      "chunk_id": "eb42ab81bb98392ff76e8cb9b771a26385e6b1da7d3bb1e94b2323fffba1ad18",
+      "document_id": "c65478a28994ceea6c2efa6ee90d9c2155fe3e25047c68de021f14cc4c701dfb",
+      "url": "https://www.alhambradegranada.org/es/info/comollegaralaalhambra.asp",
+      "position": 0
+    }
+  ],
+  "embedding_identity": {
+    "model_id": "jinaai/jina-embeddings-v5-text-small",
+    "dimension": 1024,
+    "normalized": true,
+    "device": "none",
+    "revision": null
+  },
+  "query_encoder": {
+    "model_id": "jinaai/jina-embeddings-v5-text-small",
+    "device": "cpu",
+    "revision": "dd76d535f5447ca3897a9c893fb1e612ead98192"
+  },
+  "warm_up_policy": "none",
+  "repetitions": 1,
+  "manifest": {
+    "timestamp": "2026-08-17T16:57:01+00:00",
+    "git_commit": "5355e11ff29c8d3d24944a1b89be929a7e6b35c4-dirty",
+    "dataset_version": "owi-v2.0.0-gpu-spa-2026-07-28",
+    "machine": {
+      "hostname": "sugus",
+      "platform": "Linux-7.1.7-100.fc43.x86_64-x86_64-with-glibc2.42",
+      "python": "3.14.6"
+    },
+    "versions": {
+      "rag-framework": "0.1.0",
+      "chromadb": "1.5.9",
+      "pyarrow": "25.0.0",
+      "pyyaml": "6.0.3",
+      "sentence-transformers": "5.7.0",
+      "transformers": "5.15.0",
+      "torch": "2.13.0",
+      "peft": "0.20.0"
+    },
+    "config": {
+      "dataset": {
+        "loader": "owi",
+        "path": "./data/owi",
+        "version": "owi-v2.0.0-gpu-spa-2026-07-28"
+      },
+      "chunking": {
+        "strategy": "publisher_offsets",
+        "target_tokens": null,
+        "overlap_tokens": null,
+        "minimum_tokens": null
+      },
+      "embedding": {
+        "provider": "precomputed",
+        "model": "jinaai/jina-embeddings-v5-text-small",
+        "normalize": true,
+        "batch_size": null
+      },
+      "vector_store": {
+        "type": "chroma",
+        "path": "./state/chroma",
+        "collection": "owi-spa0728-publisherchunks-jinav5small-v1"
+      },
+      "retrieval": {
+        "mode": "sequential",
+        "k": 10,
+        "partitions": 1,
+        "workers": 1
+      },
+      "generation": {
+        "enabled": true,
+        "provider": "mock"
+      },
+      "metrics": {
+        "output": "./results"
+      }
+    }
+  }
+}

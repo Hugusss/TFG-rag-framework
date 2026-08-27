@@ -1,0 +1,40 @@
+# Collective retrieval over 8 partitions: the same official OWI chunks
+# and precomputed vectors as local_chroma.yaml, ingested into one Chroma
+# collection per partition (named <collection>-pNNof08) and searched by
+# 8 threads with a global top-k merge. A local simulation of collective
+# retrieval, not a distributed system.
+#
+# Each partition count gets its own store directory so index sizes
+# are measured per layout; the baseline collection lives in ./state/chroma.
+
+dataset:
+  loader: owi
+  path: ./data/owi
+  version: owi-v2.0.0-gpu-spa-2026-07-28
+
+chunking:
+  strategy: publisher_offsets
+
+embedding:
+  provider: precomputed
+  model: jinaai/jina-embeddings-v5-text-small
+  normalize: true
+
+vector_store:
+  type: chroma
+  path: ./state/chroma-collective-p8
+  collection: owi-spa0728-publisherchunks-jinav5small-v1
+
+retrieval:
+  mode: collective
+  k: 10
+  partitions: 8
+  workers: 8
+  executor: threads
+
+generation:
+  enabled: false
+  provider: mock
+
+metrics:
+  output: ./results

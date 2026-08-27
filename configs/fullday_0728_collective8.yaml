@@ -1,0 +1,40 @@
+# The full 2026-07-28 day partitioned into 8 collections. At this scale
+# the 25 GB monolithic index no longer fits the page cache while each
+# ~170k-vector partition does: the first regime where collective
+# retrieval can beat the single collection rather than merely match it.
+# Same corpus, same vectors, same ef as the monolith comparison.
+
+dataset:
+  loader: owi
+  path: ./data/owi-fullday-0728
+  version: owi-v2.0.0-gpu-full-2026-07-28-75langs
+
+chunking:
+  strategy: publisher_offsets
+
+embedding:
+  provider: precomputed
+  model: jinaai/jina-embeddings-v5-text-small
+  normalize: true
+
+vector_store:
+  type: chroma
+  path: ./state/chroma-full0728-p8
+  collection: owi-full0728-publisherchunks-jinav5small-v1
+  # measured first with the backend default (see the paired report),
+  # then with the width that restores exact agreement at growth scale
+  ef_search: 800
+
+retrieval:
+  mode: collective
+  k: 10
+  partitions: 8
+  workers: 8
+  executor: threads
+
+generation:
+  enabled: false
+  provider: mock
+
+metrics:
+  output: ./results

@@ -1,0 +1,97 @@
+{
+  "report": {
+    "documents_read": 26492,
+    "documents_rejected": 0,
+    "duplicates_skipped": 4265,
+    "chunks_created": 63281,
+    "bytes_processed": 136755923,
+    "embedding_time_seconds": 11.756,
+    "indexing_time_seconds": 74.399,
+    "total_time_seconds": 89.424,
+    "final_vector_count": 63281,
+    "index_size_bytes": 1102905516
+  },
+  "details": {
+    "pipeline_setup_seconds": 0.536,
+    "embedding_identity": {
+      "model_id": "jinaai/jina-embeddings-v5-text-small",
+      "dimension": 1024,
+      "normalized": true,
+      "device": "none",
+      "revision": null
+    },
+    "vectors_before_run": 0,
+    "documents_sampled_out": null,
+    "duplicate_vectors_skipped": 11878,
+    "loader_rejections": 0,
+    "loader_rejection_sample": [],
+    "chunker_rejections": 0,
+    "chunker_rejection_sample": [],
+    "documents_without_chunks": 0,
+    "windows_clipped": 17753
+  },
+  "warm_up_policy": "none",
+  "repetitions": 1,
+  "manifest": {
+    "timestamp": "2026-08-24T15:04:33+00:00",
+    "git_commit": "0cbb8e619ca505442c7f2d4ec57233e89aed5552-dirty",
+    "dataset_version": "owi-v2.0.0-gpu-spa-growth-8days-0728to0813",
+    "machine": {
+      "hostname": "sugus",
+      "platform": "Linux-7.1.8-100.fc43.x86_64-x86_64-with-glibc2.42",
+      "python": "3.14.7"
+    },
+    "versions": {
+      "rag-framework": "0.1.0",
+      "chromadb": "1.5.9",
+      "pyarrow": "25.0.0",
+      "pyyaml": "6.0.3",
+      "sentence-transformers": "5.7.0",
+      "transformers": "5.15.0",
+      "torch": "2.13.0",
+      "peft": "0.20.0"
+    },
+    "config": {
+      "dataset": {
+        "loader": "owi",
+        "path": "./data/owi-spa-growth",
+        "version": "owi-v2.0.0-gpu-spa-growth-8days-0728to0813",
+        "sample_percent": 100
+      },
+      "chunking": {
+        "strategy": "publisher_offsets",
+        "target_tokens": null,
+        "overlap_tokens": null,
+        "minimum_tokens": null
+      },
+      "embedding": {
+        "provider": "precomputed",
+        "model": "jinaai/jina-embeddings-v5-text-small",
+        "normalize": true,
+        "batch_size": null
+      },
+      "vector_store": {
+        "type": "chroma",
+        "path": "./state/chroma-spa-growth",
+        "collection": "owi-spagrowth-publisherchunks-jinav5small-v1"
+      },
+      "retrieval": {
+        "mode": "sequential",
+        "k": 10,
+        "partitions": 1,
+        "workers": 1,
+        "executor": "threads"
+      },
+      "generation": {
+        "enabled": false,
+        "provider": "mock",
+        "model": null,
+        "endpoint": "http://localhost:11434",
+        "timeout_seconds": 120
+      },
+      "metrics": {
+        "output": "./results"
+      }
+    }
+  }
+}

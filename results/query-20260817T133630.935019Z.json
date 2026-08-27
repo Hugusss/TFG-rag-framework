@@ -1,0 +1,112 @@
+{
+  "query": "monumentos de la Alhambra de Granada",
+  "retrieval_mode": "sequential",
+  "collection": "owi-spa0728-publisherchunks-jinav5small-v1",
+  "metrics": {
+    "k": 3,
+    "results_returned": 3,
+    "collection_count": 6240,
+    "embed_seconds": 8.811628600000404,
+    "search_seconds": 0.03696492101880722,
+    "retrieval_seconds": 8.848596877011005,
+    "total_seconds": 8.848608
+  },
+  "answer": null,
+  "sources": [
+    {
+      "rank": 1,
+      "score": 0.6187220811843872,
+      "chunk_id": "64e70fa1a094b8c06cb9a48ac37657ce4dfd4f3276fcb422ef7ae29cfdfbc6fc",
+      "document_id": "6de9c491db5563ee6a42e25770989e87e741f0502047012b670ec1d23d467375",
+      "url": "https://www.alhambradegranada.org/es/info/granada.asp",
+      "position": 0
+    },
+    {
+      "rank": 2,
+      "score": 0.5834451913833618,
+      "chunk_id": "4766dcb9bd39b26aa15abe92ffef2ea64a4362ad843eb1130349cb245a7c17ae",
+      "document_id": "3e96c6b5857e94079dd3448dd661880823af908e31fb953f66e145ff060cf6fa",
+      "url": "https://www.alhambradegranada.org/",
+      "position": 2
+    },
+    {
+      "rank": 3,
+      "score": 0.5648640990257263,
+      "chunk_id": "1331fe0634c8d040eefceae7e95bf7f5dffe342b2a33939286035264ea84933c",
+      "document_id": "e8c780c05e41b9f61d4be7833a9de3a814efc913b3e42f65a9bf397046cb0da7",
+      "url": "https://www.alhambradegranada.org/es/info/blog.asp",
+      "position": 0
+    }
+  ],
+  "embedding_identity": {
+    "model_id": "jinaai/jina-embeddings-v5-text-small",
+    "dimension": 1024,
+    "normalized": true,
+    "device": "none",
+    "revision": null
+  },
+  "query_encoder": {
+    "model_id": "jinaai/jina-embeddings-v5-text-small",
+    "device": "cpu",
+    "revision": "dd76d535f5447ca3897a9c893fb1e612ead98192"
+  },
+  "warm_up_policy": "none",
+  "repetitions": 1,
+  "manifest": {
+    "timestamp": "2026-08-17T13:36:30+00:00",
+    "git_commit": "009c995e5e7f8a9cbf1f7a6e3bde0eb94bd30527-dirty",
+    "dataset_version": "owi-v2.0.0-gpu-spa-2026-07-28",
+    "machine": {
+      "hostname": "sugus",
+      "platform": "Linux-7.1.7-100.fc43.x86_64-x86_64-with-glibc2.42",
+      "python": "3.14.6"
+    },
+    "versions": {
+      "rag-framework": "0.1.0",
+      "chromadb": "1.5.9",
+      "pyarrow": "25.0.0",
+      "pyyaml": "6.0.3",
+      "sentence-transformers": "5.7.0",
+      "transformers": "5.15.0",
+      "torch": "2.13.0",
+      "peft": "0.20.0"
+    },
+    "config": {
+      "dataset": {
+        "loader": "owi",
+        "path": "./data/owi",
+        "version": "owi-v2.0.0-gpu-spa-2026-07-28"
+      },
+      "chunking": {
+        "strategy": "publisher_offsets",
+        "target_tokens": null,
+        "overlap_tokens": null,
+        "minimum_tokens": null
+      },
+      "embedding": {
+        "provider": "precomputed",
+        "model": "jinaai/jina-embeddings-v5-text-small",
+        "normalize": true,
+        "batch_size": null
+      },
+      "vector_store": {
+        "type": "chroma",
+        "path": "./state/chroma",
+        "collection": "owi-spa0728-publisherchunks-jinav5small-v1"
+      },
+      "retrieval": {
+        "mode": "sequential",
+        "k": 10,
+        "partitions": 1,
+        "workers": 1
+      },
+      "generation": {
+        "enabled": false,
+        "provider": "mock"
+      },
+      "metrics": {
+        "output": "./results"
+      }
+    }
+  }
+}

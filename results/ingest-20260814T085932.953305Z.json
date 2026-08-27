@@ -1,0 +1,79 @@
+{
+  "report": {
+    "documents_read": 2363,
+    "documents_rejected": 0,
+    "duplicates_skipped": 0,
+    "chunks_created": 6240,
+    "bytes_processed": 12469349,
+    "embedding_time_seconds": 1.097,
+    "indexing_time_seconds": 4.24,
+    "total_time_seconds": 5.677,
+    "final_vector_count": 6240,
+    "index_size_bytes": 113591976
+  },
+  "details": {
+    "pipeline_setup_seconds": 0.034,
+    "vectors_before_run": 0,
+    "loader_rejections": 0,
+    "loader_rejection_sample": [],
+    "chunker_rejections": 0,
+    "chunker_rejection_sample": [],
+    "documents_without_chunks": 0,
+    "windows_clipped": 1949
+  },
+  "warm_up_policy": "none",
+  "repetitions": 1,
+  "manifest": {
+    "timestamp": "2026-08-14T08:59:32+00:00",
+    "git_commit": "0086688d472e4c447548275b2e879a746bf4c900",
+    "dataset_version": "owi-v2.0.0-gpu-spa-2026-07-28",
+    "machine": {
+      "hostname": "sugus",
+      "platform": "Linux-7.1.7-100.fc43.x86_64-x86_64-with-glibc2.42",
+      "python": "3.14.6"
+    },
+    "versions": {
+      "rag-framework": "0.1.0",
+      "chromadb": "1.5.9",
+      "pyarrow": "25.0.0",
+      "pyyaml": "6.0.3"
+    },
+    "config": {
+      "dataset": {
+        "loader": "owi",
+        "path": "./data/owi",
+        "version": "owi-v2.0.0-gpu-spa-2026-07-28"
+      },
+      "chunking": {
+        "strategy": "publisher_offsets",
+        "target_tokens": null,
+        "overlap_tokens": null,
+        "minimum_tokens": null
+      },
+      "embedding": {
+        "provider": "precomputed",
+        "model": "jinaai/jina-embeddings-v5-text-small",
+        "normalize": true,
+        "batch_size": null
+      },
+      "vector_store": {
+        "type": "chroma",
+        "path": "./state/chroma",
+        "collection": "owi-spa0728-publisherchunks-jinav5small-v1"
+      },
+      "retrieval": {
+        "mode": "sequential",
+        "k": 10,
+        "partitions": 1,
+        "workers": 1
+      },
+      "generation": {
+        "enabled": false,
+        "provider": "mock"
+      },
+      "metrics": {
+        "output": "./results"
+      }
+    }
+  }
+}

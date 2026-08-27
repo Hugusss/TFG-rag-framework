@@ -1,0 +1,35 @@
+# Week-1 baseline: official OWI publisher chunks and precomputed
+# embeddings, stored in a persistent local Chroma collection.
+#
+# The corpus (OWI v2.0.0 spa slice) and its official jina-v5 embeddings
+# are documented in docs/dataset.md; the collection name encodes corpus,
+# chunking, and embedding model so collections are never mixed.
+
+dataset:
+  loader: owi
+  path: ./data/owi
+  version: owi-v2.0.0-gpu-spa-2026-07-28
+
+chunking:
+  strategy: publisher_offsets
+
+embedding:
+  provider: precomputed
+  model: jinaai/jina-embeddings-v5-text-small
+  normalize: true
+
+vector_store:
+  type: chroma
+  path: ./state/chroma
+  collection: owi-spa0728-publisherchunks-jinav5small-v1
+
+retrieval:
+  mode: sequential
+  k: 10
+
+generation:
+  enabled: false
+  provider: mock
+
+metrics:
+  output: ./results
