@@ -239,6 +239,10 @@ class RAGPipeline:
         loading a different corpus against it could silently attach
         wrong official vectors (overlapping ids, different text).
         ``total_time_seconds`` includes component setup.
+
+        Cost: one streaming pass over the corpus, linear in the number of
+        chunks, with memory bounded by ``_BATCH_SIZE`` chunks and their
+        vectors rather than by corpus size.
         """
         source = Path(self.config.dataset.path)
         total_start = time.perf_counter()

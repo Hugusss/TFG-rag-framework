@@ -29,6 +29,11 @@ def merge_top_k(partial_results: list[list[SearchResult]], k: int) -> list[Searc
       happen, so one signals overlapping partitions upstream.
     - A non-finite or non-numeric score raises :class:`RetrievalError`
       — NaN would silently corrupt the order.
+
+    Cost: one pass over the ``C`` candidates plus a sort of the unique
+    ids, so O(C log C) time and O(C) memory. With document-level
+    partitioning ``C`` is at most ``P * k``, which is why the reduction
+    stays negligible next to the searches that feed it.
     """
     if isinstance(k, bool) or not isinstance(k, int) or k < 1:
         raise RetrievalError(f"k must be a positive int, got {k!r}")

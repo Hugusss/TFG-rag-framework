@@ -65,6 +65,11 @@ def exact_top_k_many(
     small buffer above ``k`` absorbs score ties (duplicate texts have
     identical vectors) so the final ``(score desc, chunk_id)`` order
     matches the single-query function.
+
+    Cost: O(N * Q * d) time for ``N`` stored vectors, ``Q`` queries and
+    ``d`` dimensions — the price of an exact answer, and the reason this
+    is a reference rather than a retrieval mode — but only O(Q * k)
+    memory, which is what makes it usable at corpus scale.
     """
     if isinstance(k, bool) or not isinstance(k, int) or k < 1:
         raise ValueError(f"k must be a positive int, got {k!r}")

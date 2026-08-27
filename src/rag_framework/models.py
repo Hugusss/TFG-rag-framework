@@ -149,7 +149,10 @@ def stable_bucket(key: str, buckets: int) -> int:
     ``buckets``. Stable across processes, machines and Python versions
     (unlike ``hash()``, which is salted per process for strings); used
     for partition assignment and for corpus sampling, so both agree on
-    what a "stable" assignment means (ADR-006, ADR-011)."""
+    what a "stable" assignment means (ADR-006, ADR-011).
+
+    Cost: one hash of the key, independent of ``buckets`` and of how
+    many keys have been bucketed before."""
     if isinstance(buckets, bool) or not isinstance(buckets, int):
         raise TypeError(f"buckets must be an int, got {type(buckets).__name__}")
     if buckets < 1:
