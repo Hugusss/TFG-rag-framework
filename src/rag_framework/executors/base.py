@@ -32,7 +32,7 @@ class Executor(ABC):
     - :meth:`map` returns outcomes **in item order**, one per item, no
       matter how they were scheduled; it never raises for a failing
       item — the exception is captured in ``TaskOutcome.error`` so a
-      worker failure is visible data (spec Week-3 decision rule), and
+      worker failure is visible data rather than a lost result, and
       the caller decides whether the whole call fails.
     - ``worker_id`` identifies the worker that ran the item, stable for
       that worker's lifetime; ``seconds`` is the item's wall time on

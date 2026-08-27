@@ -397,7 +397,7 @@ def test_report_write_failure_keeps_the_metrics(tmp_path, capsys):
 
 
 def test_collective_mode_end_to_end(tmp_path, capsys, monkeypatch):
-    """Spec Week-3 deliverable: both modes runnable through config."""
+    """Both retrieval modes are reachable by changing configuration alone."""
     from rag_framework.orchestration import pipeline as pipeline_module
 
     monkeypatch.setattr(

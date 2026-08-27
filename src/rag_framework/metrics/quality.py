@@ -61,7 +61,7 @@ def reciprocal_rank(ranking: list[str], relevant: set[str]) -> float:
 
 
 def summarize(values: list[float]) -> dict:
-    """The spec-section-17.2 summary block: min/median/p95/mean/std."""
+    """The summary block used by every benchmark: min/median/p95/mean/std."""
     if not values:
         raise ValueError("cannot summarize an empty list")
     ordered = sorted(values)

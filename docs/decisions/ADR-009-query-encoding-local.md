@@ -38,7 +38,7 @@ lazily built local encoder that must declare the same `model_id`.
   equivalent in practice.
 - Local encoding removes the SSH dependency from every retrieval
   experiment (latency ~81 ms/query warm on CPU vs seconds over SSH),
-  which matters for Week-2/3 latency measurements: the measured system
+  which matters for the latency measurements: the measured system
   must not include an accidental network hop.
 - Option 3 cannot reproduce the corpus's embedding space at all.
 

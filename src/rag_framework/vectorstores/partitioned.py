@@ -120,7 +120,7 @@ class PartitionedVectorStore(VectorStore):
         return sum(self.partition_counts())
 
     def partition_counts(self) -> list[int]:
-        """Vectors per partition — the imbalance measure of spec 18 B."""
+        """Vectors per partition — how evenly the hash spread the corpus."""
         return [store.count() for store in self._stores]
 
     def reset(self) -> None:

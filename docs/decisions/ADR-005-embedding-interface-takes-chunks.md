@@ -46,5 +46,5 @@ with the reason recorded here.
   chunker and pinned by tests on both sides of the seam.
 - `embed_query` on the precomputed provider raises until the retrieval
   increment brings the live encoder — ingestion never
-  embeds queries, so the Week-1 gate is unaffected; the deferral is
+  embeds queries, so ingestion is unaffected; the deferral is
   loud (NotImplementedError with the reason), not hidden.

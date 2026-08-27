@@ -46,7 +46,7 @@ Consequences: balance is statistical (≈ binomial; measured spread on
 itself an Experiment-B metric ("imbalance between partitions"); the
 constants are pinned by golden tests so any change to the rule is a
 visible, deliberate break; P is part of a partitioned index's identity
-(collection naming in increment 16), never a runtime knob over an
+(collection naming carries the layout), never a runtime knob over an
 existing index.
 
 ## Decision 2 — merge order is (score desc, chunk_id asc); duplicates keep the best candidate; invalid scores raise
