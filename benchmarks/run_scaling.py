@@ -1,22 +1,16 @@
-"""Partition- and worker-scaling experiments (spec section 18, B and C).
+"""Partition- and worker-scaling experiments.
 
-Experiment B — partition scaling: for the same corpus, the collective
-layouts P = 1, 2, 4, 8 (workers = P) against the sequential baseline.
-Experiment C — worker scaling: one layout (P = 8 by default) searched
-by the serial executor and by 1, 2, 4, 8 threads.
+Partition scaling: the collective layouts P = 1, 2, 4, 8 (workers = P)
+against the sequential baseline, same corpus. Worker scaling: one layout
+searched by the serial executor and by 1, 2, 4, 8 threads. Both record
+total latency, query-embedding time, fan-out wall time, merge time,
+maximum and mean worker time, candidates returned, partition-size and
+worker-time imbalance, and index size — after a stated warm-up and for a
+stated number of repetitions. All configurations share the baseline's
+query encoder, so every one sees the identical query vector.
 
-Measured per configuration, over all evaluation queries after a stated
-warm-up and for a stated number of repetitions (Rule 9): total
-retrieval latency, query-embedding time, fan-out wall time ("search"),
-coordinator merge time, maximum and mean worker search time,
-candidates returned, partition-size imbalance and worker-time
-imbalance, index size. Summaries are spec section 17.2 blocks
-(min / median / p95 / mean / std). One raw result file per experiment
-through the metrics layer; plots come from those files, never from
-here.
-
-All configurations share the baseline's query encoder, so the model
-loads once and every configuration sees the identical query vector.
+Writes: results/scaling-partitions-<timestamp>.json and
+results/scaling-workers-<timestamp>.json.
 """
 
 from __future__ import annotations

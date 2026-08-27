@@ -71,7 +71,7 @@ class TestRecipe:
         )
         provider.embed_query("q")
         assert stub.calls[0][1]["batch_size"] == 64
-        assert provider.batch_size == 64  # machine-readable (spec §10)
+        assert provider.batch_size == 64  # recorded in the run manifest
 
     def test_loader_half_of_the_recipe_is_pinned(self, monkeypatch):
         # the constructor half — trust_remote_code and device — must be

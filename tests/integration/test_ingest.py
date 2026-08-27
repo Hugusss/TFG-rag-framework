@@ -1,9 +1,9 @@
-"""Integration test: full ingest over a synthetic corpus (spec §21).
+"""Integration test: full ingest over a synthetic corpus.
 
 Builds a schema-faithful miniature of the OWI v2.0.0 layout (records +
 text + embeddings parquet), writes a real YAML config, and runs the
-pipeline end to end into a temporary Chroma collection — including the
-idempotence re-run the spec's Week-1 decision rule demands.
+pipeline end to end into a temporary Chroma collection, including the
+re-run that proves ingestion is idempotent.
 """
 
 import json
@@ -124,8 +124,8 @@ def test_full_ingest_and_idempotent_rerun(tmp_path):
     assert report.index_size_bytes > 0
     assert report.total_time_seconds >= 0
 
-    # the spec's Week-1 decision rule: re-ingesting unchanged input
-    # must not create duplicates — on a fresh pipeline instance...
+    # re-ingesting unchanged input must not create duplicates — and it
+    # must hold on a fresh pipeline instance, not just in-process...
     second_pipeline = RAGPipeline.from_config(config_path)
     second = second_pipeline.ingest()
     assert second.final_vector_count == 3
@@ -140,7 +140,8 @@ def test_full_ingest_and_idempotent_rerun(tmp_path):
 
 def test_rejections_reach_the_written_report(tmp_path, capsys):
     # one record whose text half is empty: rejected with a reason, and
-    # that reason must survive into the report payload (spec section 8)
+    # the reason must survive into the report payload, or a rejection
+    # becomes an unexplained count
     docs = DOCS + [("ccc", "", [(0, 4)])]
     write_corpus(tmp_path / "corpus", docs=docs)
     config_path = write_config(tmp_path)
@@ -224,7 +225,7 @@ def test_query_cli_end_to_end(tmp_path, capsys, monkeypatch):
     assert payload["metrics"]["results_returned"] == 2
     assert payload["metrics"]["embed_seconds"] >= 0
     assert payload["metrics"]["search_seconds"] >= 0
-    # the spec section-12 retrieval/generation separation keys
+    # retrieval and generation stay separately timed
     assert payload["metrics"]["total_seconds"] >= payload["metrics"]["retrieval_seconds"]
     assert payload["answer"] is None
     # query vectors are attributed to the encoder that produced them
@@ -267,7 +268,7 @@ def test_query_with_mock_generation(tmp_path, monkeypatch, capsys):
         + payload["metrics"]["generation_seconds"]
     )
 
-    # --retrieval-only still overrides generation (spec section 14)
+    # --retrieval-only overrides a generation-enabled config
     exit_code = main(
         ["query", "--config", str(config_path), "--question", "q",
          "--retrieval-only"]

@@ -267,7 +267,7 @@ class TestChunkingShapes:
             load(tmp_path, data)
 
     def test_spec_short_example_without_minimum_tokens_is_rejected(self, tmp_path):
-        # Documented deviation (ADR-004): the spec's section-15 example
+        # Deliberate strictness (ADR-004): a shorter configuration form
         # omits minimum_tokens, but its section-9 example includes it and
         # an experiment must state its minimum chunk size explicitly.
         data = base()
