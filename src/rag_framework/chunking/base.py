@@ -19,7 +19,7 @@ class Chunker(ABC):
     - :meth:`split` is deterministic and streaming: the same documents
       produce the same chunks, ids, and order on every run, without
       materializing the corpus in memory.
-    - Chunks never silently disappear (Rule 6): every input document
+    - Chunks never silently disappear: every input document
       counts in ``documents_processed``; a document whose windows
       produce no chunks counts in ``documents_without_chunks`` and is
       logged; an individual window that cannot be produced is appended

@@ -1,13 +1,10 @@
-"""Global top-k over per-partition candidates (spec section 13.4).
+"""Global top-k over per-partition candidates.
 
-A pure function — no backend, no threads — so the reduction step of
-collective retrieval is tested exhaustively on its own, and the same
-code merges results whether the partials came from threads,
-processes, or (later) remote workers.
-
-Ordering is total and deterministic: score descending, then
-``chunk_id`` ascending, so equal scores never depend on which
-partition answered first (ADR-006).
+A pure function — no backend, no threads — so the same code reduces
+results whether the partials came from threads, processes or remote
+workers, and can be tested exhaustively on its own. Ordering is total
+and deterministic: score descending, then ``chunk_id`` ascending, so
+equal scores never depend on which partition answered first (ADR-006).
 """
 
 from __future__ import annotations

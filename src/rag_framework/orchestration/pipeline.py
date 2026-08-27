@@ -8,9 +8,9 @@ so a typo'd config fails at build time, before any work runs.
 
 `ingest()` streams documents through loader → chunker → embedding
 provider → vector store in bounded batches, accumulates per-stage
-timings, and produces the spec-section-8 :class:`IngestionReport` from
-the counters the seams themselves expose. The orchestrator adds no
-data logic of its own — wiring and timing only.
+timings, and builds the :class:`IngestionReport` from the counters the
+seams themselves expose. The orchestrator adds no data logic of its
+own — wiring and timing only.
 """
 
 from __future__ import annotations
@@ -130,9 +130,10 @@ def build_vector_store(
 
         if config.retrieval.mode == "collective":
             # the partition layout is an ingest-time property of the
-            # index, so it is decided here, where the store is built;
-            # P=1 still goes through the partitioned path so Experiment
-            # B's P=1 point runs the same code as P=8
+            # index, so it is decided here, where the store is built.
+            # P=1 still goes through the partitioned path: a scaling
+            # curve whose first point runs different code measures the
+            # code change, not the partition count.
             return PartitionedVectorStore(
                 chroma_store, config.retrieval.partitions
             )
@@ -310,8 +311,9 @@ class RAGPipeline:
             report.final_vector_count,
         )
         if final_vector_count != chunks_created:
-            # legitimate on re-ingest into an existing collection, but
-            # always worth a visible note (Rule 6)
+            # legitimate when re-ingesting into an existing collection,
+            # but never left unsaid: it also happens when a run points at
+            # the wrong collection
             _logger.warning(
                 "stored vector count (%d) differs from chunks processed"
                 " this run (%d): pre-existing collection content?",
@@ -330,7 +332,7 @@ class RAGPipeline:
         """Retrieve — and, when enabled, generate — for ``question``.
 
         ``retrieval_only=True`` skips generation regardless of the
-        configuration (spec section 14). ``k`` defaults to
+        configuration. ``k`` defaults to
         ``retrieval.k``; caller-supplied values are validated like the
         config would (a typo must not silently change an experiment).
         """
@@ -362,14 +364,14 @@ class RAGPipeline:
         generation_seconds = None
         if generate:
             start = time.perf_counter()
-            # context assembly (spec section 14) is the identity step
-            # here: the ranked SearchResults ARE the context; prompt
-            # construction happens inside the generator (Rule 2)
+            # context assembly is the identity step here: the ranked
+            # SearchResults ARE the context, and prompt construction
+            # happens inside the generator
             answer = self.generator.generate(question, sources)
             generation_seconds = round(time.perf_counter() - start, 6)
         # stamp the request total before any bookkeeping calls: count()
         # is cheap locally but becomes a network round trip on a remote
-        # store, and it must never pollute the section-12 request total
+        # store, and it must never inflate the reported request total
         total_seconds = round(time.perf_counter() - total_start, 6)
         timings = self.retriever.timings
 
@@ -384,12 +386,12 @@ class RAGPipeline:
             "embed_seconds": rounded("embed_seconds"),
             "search_seconds": rounded("search_seconds"),
             "retrieval_seconds": rounded("total_seconds"),
-            # generation reported separately so it can never hide
-            # retrieval behavior (spec section 12)
+            # reported separately so a slow generator can never mask
+            # retrieval behaviour behind one combined number
             "generation_seconds": generation_seconds,
             "total_seconds": total_seconds,
-            # collective-only stages (spec section 18 B); None in
-            # sequential mode so every report has the same shape
+            # collective-only stages; None in sequential mode so every
+            # report keeps the same shape
             "merge_seconds": rounded("merge_seconds"),
             "worker_max_seconds": rounded("worker_max_seconds"),
             "worker_mean_seconds": rounded("worker_mean_seconds"),

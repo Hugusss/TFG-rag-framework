@@ -1,16 +1,11 @@
-"""Deterministic corpus sampling for dataset-size experiments (ADR-011).
+"""Deterministic corpus sampling, as a decorator of any loader (ADR-011).
 
-Decorates any DocumentLoader and keeps a document iff
-``stable_bucket(document_id, 100) < percent``. The subsets are
-*nested* — every document of the 10 % subset is in the 25 % subset —
-and independent of file order and of the machine, so "50 % of the
-corpus" names the same documents on every run (spec section 18 A holds
-retrieval constant while the dataset grows; the dataset must be a
-stable quantity for that to mean anything).
-
-Documents dropped here are counted in ``documents_sampled_out`` and
-never reach the chunker; rejections and duplicates are the inner
-loader's and are exposed unchanged.
+Keeps a document iff ``stable_bucket(document_id, 100) < percent``. The
+subsets are nested — every document of the 10 % subset is also in the
+25 % subset — and independent of file order and of the machine, so
+"50 % of the corpus" names the same documents on every run — dataset
+size is only a variable if each size is reproducible. Dropped documents
+are counted in ``documents_sampled_out`` and never reach the chunker.
 """
 
 from __future__ import annotations

@@ -1,13 +1,10 @@
-"""Retrieval-quality metrics (spec section 17.3), document level.
+"""Retrieval-quality metrics, judged at document level.
 
 Pure functions over ranked document ids and a relevance set — no
-retrieval, no storage, no I/O — so the same code scores the chunk-size
-experiment, the collective-correctness comparison, and anything later,
-and every function is exhaustively unit-testable.
-
-Relevance in this project is judged at document level
-(evaluation/queries.jsonl), so rankings are *document* rankings: use
-:func:`document_ranking` to collapse a chunk-level result list first.
+retrieval, no storage, no I/O — so the same code scores every experiment
+and each function is exhaustively unit-testable. Relevance judgements in
+``evaluation/queries.jsonl`` name documents, so a chunk-level result list
+must be collapsed with :func:`document_ranking` first.
 """
 
 from __future__ import annotations
@@ -82,7 +79,7 @@ def summarize(values: list[float]) -> dict:
     }
 
 
-# --- ranking comparisons (spec section 13.5): candidate vs reference ---
+# --- ranking comparisons: candidate vs reference ---
 
 
 def overlap_at_k(ranking: list[str], reference: list[str], k: int) -> float:
@@ -133,7 +130,7 @@ def classify_differences(
     tolerance: float = 1e-6,
 ) -> dict:
     """Attribute every candidate-vs-baseline difference using the
-    exact reference (spec section 13.5: "investigate before assuming").
+    exact reference, so a difference is explained rather than assumed.
 
     Counts returned:
 
@@ -173,7 +170,7 @@ def classify_differences(
 
 def imbalance(values: list[float]) -> dict:
     """Spread of a per-partition quantity (sizes, worker times) relative
-    to its mean — spec section 18 B's "imbalance between partitions"."""
+    to its mean: how unevenly the work was divided."""
     if not values:
         raise ValueError("imbalance is undefined for an empty list")
     mean = sum(values) / len(values)

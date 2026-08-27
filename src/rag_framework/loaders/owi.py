@@ -9,23 +9,11 @@ dataset directories sharing one hive partition scheme:
     <root>/**/<text dataset>/year=Y/month=M/day=D/language=L/
         metadata_N.parquet             id, main_content, url, title, ...
 
-The **records files define the corpus**: exactly the documents the
-publisher chunked and embedded. Text arrives by joining the sibling text
-file on ``id``; text rows without a records counterpart are not part of
-the corpus and are ignored. The embeddings file is deliberately NOT read
-here — vectors belong to the embedding-provider seam, and this loader
-must work identically for a live embedding provider.
-
-Shards are paired by (hive partition, shard index). A records shard
-without its text sibling raises :class:`LoaderError`: a partially
-joinable corpus would silently misrepresent the experiment.
-
-``document_id`` adopts the publisher ``id`` verbatim (ADR-001): it is
-already a stable hash and the join key to every official artifact.
-Publisher chunk offsets travel in ``Document.metadata["chunk_offsets"]``
-as ``(start, end)`` tuples; validating them against the text is the
-chunker's job. ``metadata["date"]`` is the crawl date, reconstructed
-from the hive ``year=/month=/day=`` partition.
+The records files define the corpus: exactly the documents the publisher
+chunked and embedded. Text arrives by joining the sibling text file on
+``id``. Emitted documents carry the publisher chunk offsets in
+``metadata["chunk_offsets"]`` and the crawl date rebuilt from the hive
+partition; validating offsets against the text is the chunker's job.
 """
 
 from __future__ import annotations
@@ -47,6 +35,9 @@ _logger = logging.getLogger(__name__)
 _RECORDS_NAME = re.compile(r"^metadata_(\d+)_records\.parquet$")
 _TEXT_NAME = re.compile(r"^metadata_(\d+)\.parquet$")
 
+# the sibling embeddings parquet is deliberately not read here: vectors
+# belong to the embedding-provider seam, so this loader behaves the same
+# whether vectors come from the corpus or from a live encoder
 _RECORDS_COLUMNS = ["id", "chunk_offsets"]
 _TEXT_COLUMNS = ["id", "url", "title", "main_content", "language"]
 
@@ -119,7 +110,7 @@ class OwiLoader(DocumentLoader):
                 continue
             # the pairing key spans dataset directories on purpose, so a
             # second file with the same key would silently shadow the
-            # real one — a mispaired corpus must fail loudly (Rule 6)
+            # real one, and a mispaired corpus must fail loudly
             if key in target:
                 raise LoaderError(
                     f"conflicting files for shard {key[1]} in partition "
@@ -139,6 +130,8 @@ class OwiLoader(DocumentLoader):
             else:
                 shards.append(_Shard(path, text_file, partition, index))
         if unpaired:
+            # a partly joinable corpus is worse than none: the run would
+            # succeed over a silently smaller document set
             raise LoaderError(
                 "records shard(s) without a text sibling: " + ", ".join(unpaired)
             )
@@ -223,7 +216,7 @@ class OwiLoader(DocumentLoader):
                 "source_text_file": text_ref,
                 "ingestion_version": __version__,
             }
-            # missing values are absent keys, never invented (spec section 7)
+            # missing values are absent keys, never invented placeholders
             if url:
                 metadata["url"] = url
             if title:
@@ -234,4 +227,7 @@ class OwiLoader(DocumentLoader):
                 metadata["date"] = date
 
             seen.add(record_id)
+            # the publisher id is adopted verbatim rather than re-hashed
+            # (ADR-001): it is already a content hash, and keeping it makes
+            # every official artifact directly joinable
             yield Document(document_id=record_id, text=main_content, metadata=metadata)

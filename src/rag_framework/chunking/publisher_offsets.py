@@ -1,40 +1,11 @@
 """Chunker strategy that reuses the publisher's official chunk windows.
 
-This is half of the project's central design move (ADR-002): the OWI
-dataset ships its own chunk boundaries (and embeddings), and they enter
-the pipeline as an ordinary strategy of the Chunker seam — never as a
-special branch in the orchestrator. Downstream components cannot tell
-publisher chunks from computed ones.
-
-Two properties are load-bearing:
-
-- ``Chunk.position`` equals the publisher's window index (``chunk_idx``
-  in the official embeddings parquet). The precomputed embedding
-  provider will look vectors up by ``(document_id, position)``, so a
-  rejected window never renumbers its successors.
-- Chunk text is byte-exact ``text[start:end]`` — no cleaning, no
-  normalization. The official embeddings were computed over exactly
-  these strings, so any change to the text breaks vector alignment;
-  non-cosmetic changes also change the chunk id (the id scheme itself
-  normalizes whitespace and unicode composition before hashing).
-
-Overhang policy (measured on the real corpus, recorded in ADR-002):
-about a third of real windows end up to 10 characters past the text end
-— a known artifact of the publisher pipeline. Window ends overhanging by
-at most :data:`MAX_OVERHANG` are clipped to the text end and counted in
-``windows_clipped`` (chunk metadata gains ``clipped: True``); anything
-larger is rejected as corruption, not quirk. ``MAX_OVERHANG`` is
-deliberately code, not configuration: the spec's rule that chunking
-parameters live in config covers values an experimenter may vary, and
-this is a validity threshold measured from the corpus — if it needs
-changing, the corpus itself changed.
-
-Publisher windows are never content-filtered: even a whitespace-only
-window is kept, because the publisher delimited it and its official
-embedding exists. The spec's "avoid empty chunks" guidance applies to
-strategies that choose their own boundaries. Document-level metadata
-keys ``start``, ``end``, and ``clipped`` are reserved for the chunker
-and discarded if present on a document.
+The OWI dataset ships its own chunk boundaries alongside its official
+embeddings, and they enter through the Chunker seam like any other
+strategy instead of as a branch in the orchestrator (ADR-002), so
+nothing downstream can tell publisher chunks from computed ones. Windows
+come from ``metadata["chunk_offsets"]``; malformed or out-of-range ones
+are rejected with a reason, and slight overhangs are clipped and counted.
 """
 
 from __future__ import annotations
@@ -48,7 +19,11 @@ from rag_framework.models import Chunk, Document, make_chunk_id
 
 _logger = logging.getLogger(__name__)
 
-MAX_OVERHANG = 10  # characters; the measured corpus bound
+# About a third of real windows end a few characters past the text end,
+# always by the same small amount — a publisher-side artifact, not
+# corruption. This is a validity threshold measured from the corpus, not
+# a knob an experiment varies, so it lives in code rather than config.
+MAX_OVERHANG = 10  # characters
 
 # chunker-owned metadata keys; document-level values are discarded
 _RESERVED_KEYS = ("chunk_offsets", "start", "end", "clipped")
@@ -89,6 +64,10 @@ class PublisherOffsetsChunker(Chunker):
                 if key not in _RESERVED_KEYS
             }
             produced = 0
+            # position is the publisher's own window index, not a running
+            # count of accepted windows: the precomputed provider looks
+            # vectors up by (document_id, position), so a rejected window
+            # must not renumber the ones after it
             for position, window in enumerate(offsets):
                 source = f"{document.document_id}#window{position}"
                 try:
@@ -124,6 +103,12 @@ class PublisherOffsetsChunker(Chunker):
                     clipped = True
                     self.windows_clipped += 1
 
+                # sliced verbatim: the official embeddings were computed
+                # over exactly these substrings, so cleaning or
+                # normalizing here would break vector alignment. Nor is
+                # the content filtered — a whitespace-only window still
+                # has an official vector, so dropping it would leave a
+                # hole in the (document_id, position) key space.
                 text = document.text[start:end]
                 metadata = dict(inherited)
                 metadata["start"] = start

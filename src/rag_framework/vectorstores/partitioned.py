@@ -1,22 +1,11 @@
-"""Partitioned store: P collections behind one VectorStore (spec 13.2).
+"""Partitioned store: P collections behind one VectorStore.
 
-The orchestrator ingests into "a vector store"; this adapter makes that
-store P inner stores — one collection per logical partition — and
-routes every chunk to the partition that owns its document
-(``partition_for``, ADR-006). Ingest code does not change: partitioning
-enters as an adapter of an existing seam, the same move that brought
-the official OWI artifacts in (ADR-002).
-
-Layout is part of the index identity: partition ``i`` of ``P`` lives in
-collection ``{name}-p{i:02d}of{P:02d}`` and is stamped with
-``partitions``/``partition_index`` metadata, so an index built for one
-P can never be opened as another (spec section 22).
-
-No concurrency here. :meth:`search_partition` is the unit of work a
-collective retriever fans out through the executor seam;
-:meth:`search` runs the partitions one after another and merges — the
-"P partitions, one worker" path, correct by construction and useful
-as a reference.
+Holds P inner stores, one collection per logical partition, and routes
+every chunk to the partition that owns its document (``partition_for``,
+ADR-006). Ingest code does not change: partitioning arrives as an
+adapter of an existing seam. :meth:`search_partition` exposes one
+partition's top-k as the unit of work a collective retriever fans out;
+:meth:`search` walks the partitions in turn and merges.
 """
 
 from __future__ import annotations
@@ -31,6 +20,10 @@ from rag_framework.vectorstores.base import VectorStore, VectorStoreError
 
 
 def partition_collection_name(name: str, index: int, partitions: int) -> str:
+    # P is in the name, and the pair (partitions, partition_index) is
+    # stamped on the collection metadata: together they make an index
+    # built for one P impossible to open as another, whether by a
+    # renamed config or by a partition opened in the wrong slot
     return f"{name}-p{index:02d}of{partitions:02d}"
 
 
@@ -44,7 +37,8 @@ class PartitionedVectorStore(VectorStore):
     ) -> None:
         """``store_factory(extra_metadata)`` builds one inner store; the
         adapter passes the partition layout to stamp on its collection.
-        Backend construction stays in the factory (Rule 2)."""
+        Backend construction stays in the factory, so this class holds no
+        knowledge of which store it is composing."""
         if isinstance(partitions, bool) or not isinstance(partitions, int):
             raise VectorStoreError(
                 f"partitions must be an int, got {type(partitions).__name__}"
@@ -95,8 +89,8 @@ class PartitionedVectorStore(VectorStore):
         k: int,
         filters: dict | None = None,
     ) -> list[SearchResult]:
-        """Top-``k`` of one partition, each hit stamped with its
-        ``partition_id`` (provenance, spec section 13.1 step 8)."""
+        """Top-``k`` of one partition, each hit stamped with the
+        ``partition_id`` it came from."""
         if not 0 <= index < self._partitions:
             raise VectorStoreError(
                 f"partition index {index} out of range"
@@ -113,6 +107,9 @@ class PartitionedVectorStore(VectorStore):
         k: int,
         filters: dict | None = None,
     ) -> list[SearchResult]:
+        # one partition after another, never in parallel: concurrency is
+        # the executor seam's business, so this stays the "P partitions,
+        # one worker" reference every threaded run is compared against
         partials = [
             self.search_partition(index, query_embedding, k, filters)
             for index in range(self._partitions)

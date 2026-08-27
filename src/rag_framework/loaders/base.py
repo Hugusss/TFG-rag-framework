@@ -34,7 +34,7 @@ class DocumentLoader(ABC):
       is called; corruption discoverable only while decoding a shard
       raises :class:`LoaderError` from the iterator. Backend exceptions
       never escape raw.
-    - Per-record problems never pass silently (Rule 6): each skipped
+    - Per-record problems never pass silently: each skipped
       record is logged and appended to ``rejections``; re-encountered
       document ids are counted in ``duplicates_skipped`` (first
       occurrence wins). Both attributes reset per :meth:`load` call and

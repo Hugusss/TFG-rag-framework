@@ -1,29 +1,11 @@
 """Embedding adapter that serves the corpus's official vectors.
 
-Second half of the project's central design move (ADR-002): the OWI
-dataset ships one official jina-v5 vector per publisher chunk, and they
-enter the pipeline as an ordinary EmbeddingProvider — never as a
-special path in the orchestrator.
-
-The official embeddings parquet
-(``metadata_N_embeddings.parquet {record_id, chunk_idx, embedding}``)
-is read here and nowhere else. Vectors are looked up by
-``(chunk.document_id, chunk.position)`` — identity, not text (ADR-005)
-— which is why clipping a window's text never affects which vector it
-gets, and why ``Chunk.position`` must equal the publisher's
-``chunk_idx`` (guaranteed by the publisher_offsets chunker).
-
-A chunk without its vector raises :class:`EmbeddingError`, never a
-quiet re-encode: a miss means the chunker and the vector table disagree
-about the corpus, and continuing would invalidate the experiment.
-
-``embed_query`` delegates to a lazily built live encoder (the plan's
-design: document vectors from the official parquet, query vectors from
-the live model). The delegate is constructed on first query — never at
-pipeline construction, so ingestion pays no model-load cost — and must
-declare the same ``model_id`` as the corpus vectors: one collection,
-one embedding space (spec section 10). Without a configured delegate,
-``embed_query`` stays loudly unavailable.
+The OWI dataset ships one official vector per publisher chunk, and they
+enter through the EmbeddingProvider seam like any other provider rather
+than as a path in the orchestrator (ADR-002). The official embeddings
+parquet (``{record_id, chunk_idx, embedding}``) is read here and nowhere
+else; document vectors are looked up by identity, and queries — which no
+corpus contains — are delegated to a live encoder built on first use.
 """
 
 from __future__ import annotations
@@ -151,7 +133,7 @@ class PrecomputedEmbeddingProvider(EmbeddingProvider):
         # corpora republish unchanged documents — record ids are content
         # hashes, so the text behind both vectors is identical): the
         # first occurrence wins, mirroring the loader, and the count is
-        # reported so no report can silently absorb it (Rule 6)
+        # reported so no report can absorb it unnoticed
         self.duplicate_vectors_skipped = 0
         for row, key in enumerate(zip(record_ids, chunk_idxs)):
             if key[0] is None or key[1] is None:
@@ -182,6 +164,9 @@ class PrecomputedEmbeddingProvider(EmbeddingProvider):
     def embed_documents(self, chunks: list[Chunk]) -> list[list[float]]:
         vectors = []
         for chunk in chunks:
+            # keyed by identity rather than by text (ADR-005), so clipping
+            # a window's text cannot change which vector it receives; this
+            # is why Chunk.position must stay the publisher's chunk_idx
             row = self._index.get((chunk.document_id, chunk.position))
             if row is None:
                 raise EmbeddingError(
@@ -199,6 +184,8 @@ class PrecomputedEmbeddingProvider(EmbeddingProvider):
                 " precomputed document vectors only"
             )
         if self.query_encoder is None:
+            # built on first query, never at pipeline construction, so an
+            # ingest that only serves corpus vectors pays no model load
             encoder = self._query_encoder_factory()
             if encoder.model_id != self.model_id:
                 raise EmbeddingError(

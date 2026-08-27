@@ -13,7 +13,7 @@ class VectorStoreError(Exception):
 
     Incompatible index configuration, duplicate ids inside one batch,
     mismatched chunk/vector counts, backend failures — all surface as
-    this type; backend exceptions never escape raw (spec section 22).
+    this type; backend exceptions never escape raw.
     """
 
 
@@ -25,13 +25,13 @@ class VectorStore(ABC):
     - :meth:`create_or_open` prepares a named collection and is
       idempotent; opening an existing collection whose stored embedding
       configuration conflicts with the expected one raises
-      :class:`VectorStoreError` (an incompatible index must never be
-      silently reused — spec section 22).
+      :class:`VectorStoreError`, because an incompatible index must never
+      be silently reused.
     - :meth:`add` stores one vector per chunk, rejects mismatched
       lengths and duplicate chunk ids within a batch, and is
       **idempotent across re-ingestion**: chunk ids are deterministic,
-      so re-adding the same chunks must not create duplicates
-      (spec sections 7 and 11). Stored per-row metadata is exactly the
+      so re-adding the same chunks must not create duplicates.
+      Stored per-row metadata is exactly the
       chunk's metadata plus the reserved provenance keys
       ``document_id`` and ``position``; a non-scalar metadata value or
       a reserved-key collision is an error, never a silent drop.
@@ -44,12 +44,12 @@ class VectorStore(ABC):
       seam.
     - Collections persist across processes; :meth:`count` reports the
       stored vector count; :meth:`reset` empties the collection but
-      leaves it usable (controlled experiments, spec section 11).
+      leaves it usable, so a controlled experiment can rebuild in place.
     - :meth:`iter_vectors` streams every stored ``(chunk_id,
       document_id, vector)`` in a stable order, so an exact brute-force
-      reference can be computed over precisely what the index holds
-      (spec section 13.5: differences between approximate indexes are
-      only attributable against an exact answer).
+      reference can be computed over precisely what the index holds —
+      differences between two approximate indexes are only attributable
+      against an exact answer.
     """
 
     @abstractmethod

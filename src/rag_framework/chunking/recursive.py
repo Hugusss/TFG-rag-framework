@@ -1,31 +1,11 @@
-"""Recursive chunking strategy: paragraph-aware word windows (spec §9).
+"""Recursive chunking strategy: paragraph-aware word windows.
 
-The strategy the pipeline uses when the corpus does not bring its own
-chunk boundaries (or when an experiment wants boundaries it controls):
-
-1. Text is split into paragraphs (blank-line boundaries), each with
-   whitespace normalized.
-2. Consecutive paragraphs are packed into one chunk while the running
-   word count stays within ``target_tokens`` — paragraph boundaries
-   are meaningful and are retained (§9).
-3. A single paragraph larger than the target is split into word
-   windows of ``target_tokens`` with ``overlap_tokens`` of overlap
-   between consecutive windows. Overlap exists to guard *arbitrary*
-   cuts; paragraph boundaries are not arbitrary, so packed-paragraph
-   seams get no overlap (recorded in ADR-008).
-4. Chunks with fewer than ``minimum_tokens`` words are dropped and
-   counted (``chunks_dropped_below_minimum``) — never silently.
-
-Token policy (ADR-008): a "token" is a whitespace-delimited word.
-Stdlib-only and deterministic; the imprecision relative to model
-subword tokens is accepted and documented — the §9 experiment
-documents a trade-off, it does not tune a model budget.
-
-Unlike the publisher path, this strategy owns its boundaries and its
-text: whitespace normalization is allowed here because the vectors for
-these chunks are computed live from exactly this text (the
-publisher-path byte-exactness rule protects *precomputed* alignment,
-which this strategy never uses).
+Used when the corpus brings no chunk boundaries of its own, or when an
+experiment wants boundaries it controls. Paragraphs are packed into
+chunks up to ``target_tokens`` words; a paragraph larger than the target
+becomes overlapping word windows; chunks below ``minimum_tokens`` are
+dropped and counted. A "token" here is a whitespace-delimited word
+(ADR-008), which keeps chunking stdlib-only and deterministic.
 """
 
 from __future__ import annotations
@@ -90,6 +70,9 @@ class RecursiveChunker(Chunker):
                 if len(words) < self._minimum:
                     self.chunks_dropped_below_minimum += 1
                     continue
+                # whitespace is normalized here, unlike the publisher
+                # path: these chunks' vectors are computed from exactly
+                # this text, so there is no external alignment to break
                 text = " ".join(words)
                 produced += 1
                 yield Chunk(
@@ -133,7 +116,10 @@ class RecursiveChunker(Chunker):
             if len(paragraph) <= self._target:
                 packed = list(paragraph)
                 continue
-            # oversized paragraph: overlapping word windows
+            # oversized paragraph: overlapping word windows. Overlap is
+            # applied only here, because it exists to protect *arbitrary*
+            # cuts — the seams between packed paragraphs are real
+            # boundaries of the text and need no bridge (ADR-008)
             stride = self._target - self._overlap
             for start in range(0, len(paragraph), stride):
                 window = paragraph[start : start + self._target]

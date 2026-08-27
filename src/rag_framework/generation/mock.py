@@ -1,11 +1,11 @@
-"""Deterministic mock generator (spec section 14).
+"""Deterministic mock generator: the seam without a model.
 
 Exists so the full RAG path — retrieval, context assembly, generation,
 answer-with-citations — can run and be tested without any language
 model. It is *extractive*: the answer is built verbatim from the
 retrieved chunks with explicit source attribution, and it labels
-itself, so no report can mistake it for model-generated prose
-(Rule 8: distinguish prototypes from claims).
+itself, so no report, figure or transcript can mistake a placeholder
+for model-generated prose.
 """
 
 from __future__ import annotations
