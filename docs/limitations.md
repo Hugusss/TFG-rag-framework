@@ -14,6 +14,14 @@ Stated as measured on the evaluation corpus (OWI v2.0.0, Spanish,
   partition descriptor that a child process can reopen; a
   function-as-a-service executor would need the same plus serialisable
   query state.
+- Some store operations assume that reaching a partition is free.
+  `PartitionedVectorStore.count()` and `partition_counts()` ask every
+  inner store in turn, which is one local call per partition today and
+  would become P network round trips against a remote backend. The same
+  holds for `iter_vectors()`, which streams the partitions one after
+  another. Nothing measured here is affected — the cost is invisible on
+  one machine — but a remote store would want these batched or cached,
+  and that is a change in the adapter, not in the seam.
 - Generation ships two adapters: a deterministic **extractive mock**
   (the default, dependency-free) and an **Ollama-backed generator**
   (greedy decoding against a local endpoint — in practice an SSH

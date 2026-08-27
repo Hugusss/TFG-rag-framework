@@ -17,3 +17,6 @@ models/
 # large generated outputs (small JSONL results ARE committed)
 results/**/*.png
 results/**/*.pdf
+
+# run logs: transient, machine-local
+*.log
