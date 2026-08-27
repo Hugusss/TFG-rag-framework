@@ -1,20 +1,11 @@
-"""Ollama-backed generator (spec section 14): the seam's first real model.
+"""Generator backed by a language model served by Ollama.
 
-Talks to an Ollama server over its local HTTP API (``/api/chat``,
-non-streaming). The endpoint is configuration — typically
-``http://localhost:11434``, which may be an SSH tunnel to a GPU host —
-and never carries credentials; the prompt is built here and nowhere
-else (Rule 2). Decoding is greedy (``temperature 0``): the most
-reproducible setting a sampling model offers, though not bit-identical
-across hardware — reports record provider and model so answers are
-attributable.
-
-Grounding contract: the model is instructed to answer only from the
-retrieved fragments, cite them as ``[n]``, and refuse when the context
-does not contain the answer — the measured score overlap between
-answerable and unanswerable queries means refusal *must* come from the
-generation stage, not from a similarity threshold. An empty context
-short-circuits to the refusal text without calling the model.
+Talks to an Ollama server over its HTTP API (``/api/chat``,
+non-streaming) using only the standard library. The endpoint is
+configuration and always local — typically an SSH tunnel to a GPU host —
+so no address or credential ever lives in the repository. Prompt
+construction and the grounding contract (answer only from the retrieved
+fragments, cite them, otherwise refuse) belong to this module alone.
 """
 
 from __future__ import annotations
@@ -27,6 +18,10 @@ from collections.abc import Callable
 from rag_framework.generation.base import GenerationError, Generator
 from rag_framework.models import SearchResult
 
+# Refusal is instructed rather than gated on a score threshold: the top
+# similarity of an unanswerable query overlaps the answerable range, so
+# no cut-off can tell them apart. The generator is the only stage that
+# sees whether the retrieved text actually answers the question.
 REFUSAL = "No puedo responder con el contexto disponible."
 
 _SYSTEM = (
@@ -99,6 +94,9 @@ class OllamaGenerator(Generator):
                     {"role": "user", "content": self._prompt(query, context)},
                 ],
                 "stream": False,
+                # greedy decoding: the most reproducible setting a sampling
+                # model offers, though the server's own version still
+                # decides the weights, so reports record model and endpoint
                 "options": {"temperature": 0, "num_ctx": _NUM_CTX},
             },
             float(self.timeout_seconds),

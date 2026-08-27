@@ -1,11 +1,11 @@
-"""Sequential retrieval: the correctness baseline (spec section 12).
+"""Sequential retrieval: search one collection, return the top-k.
 
     query -> query embedding -> one search over the complete local
     collection -> top-k
 
 Deliberately minimal: this is the reference every collective
-configuration is compared against (Rule 3 — preserve a working
-baseline), so it must stay simple enough to be obviously correct.
+configuration is compared against, so it must stay simple enough to be
+obviously correct by reading it.
 """
 
 from __future__ import annotations

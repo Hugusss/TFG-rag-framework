@@ -1,10 +1,10 @@
 """Reproducibility manifest and result-file writing.
 
-Rule 9: every result file must include or reference the git commit,
-configuration, dataset version, machine, timestamp, and software
-versions. :func:`run_manifest` builds that block once, from live
-sources; :func:`write_report` stamps it into a JSON file. Nothing else
-in the project writes result files.
+Every result file carries the git commit, configuration, dataset
+version, machine, timestamp and software versions that produced it.
+:func:`run_manifest` builds that block once from live sources;
+:func:`write_report` stamps it into a JSON file. Nothing else in the
+project writes result files.
 """
 
 from __future__ import annotations
@@ -49,8 +49,8 @@ def _git_commit() -> str:
     """The current commit, "-dirty"-suffixed when the tree differs.
 
     A result stamped with a commit that does not contain the code that
-    produced it would defeat Rule 9; the dirty marker makes that state
-    visible instead of silently plausible.
+    produced it would be worse than one with no commit at all; the dirty
+    marker makes that state visible instead of silently plausible.
     """
     commit = _git("rev-parse", "HEAD")
     if commit is None:
@@ -87,8 +87,8 @@ def write_report(payload: dict, output_dir: str | Path, name_prefix: str) -> Pat
 
     File names carry a microsecond UTC timestamp and are opened
     exclusively, so runs never overwrite each other — a colliding name
-    gets a counter suffix instead of clobbering the earlier result
-    (Rule 9: results are preserved, not replaced).
+    gets a counter suffix instead of clobbering the earlier result: a
+    measurement is evidence, and evidence is added to, never replaced.
     """
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
@@ -110,9 +110,9 @@ def write_report(payload: dict, output_dir: str | Path, name_prefix: str) -> Pat
 def build_ingest_payload(pipeline, report) -> dict:
     """The complete ingest result payload.
 
-    Result-file shape is owned by the metrics layer (Rule 2): the
-    section-8 report, per-seam accounting details the fixed report
-    cannot carry, the Rule-9 policy fields, and the manifest.
+    Result-file shape is owned by the metrics layer: the ingestion
+    report, the per-seam accounting details the fixed report cannot
+    carry, the warm-up and repetition policy, and the manifest.
     ``pipeline`` is a RAGPipeline (untyped to keep metrics free of an
     orchestration import).
     """
@@ -157,7 +157,7 @@ _REJECTION_SAMPLE = 20  # full detail is in the logs; reports carry a sample
 
 
 def build_query_payload(pipeline, result) -> dict:
-    """The complete query result payload (spec section 22 query log).
+    """The complete query result payload.
 
     ``result`` is a RAGResult; sources are recorded as compact rows
     (ids, score, provenance) — full texts live in the store, not in

@@ -1,16 +1,13 @@
 """Retrieval quality and exactness for one corpus configuration.
 
-For every evaluation query, retrieves through the configured pipeline
-(HNSW) and computes the exact brute-force top-k over the stored
-vectors, then reports side by side: mean Recall@k / MRR through the
-index and through the exact reference (their gap is the approximation
-cost), HNSW-vs-exact overlap, per-query detail, relevant-document
-coverage, and latency summaries after a stated warm-up. One raw file
-per run (``quality-*.json``) through the metrics layer.
+For every evaluation query it retrieves through the configured pipeline
+and also computes the exact brute-force top-k over the stored vectors,
+then reports both side by side: the gap between them is the cost of
+approximate indexing. Also records overlap, per-query detail, relevant
+document coverage and latency after a stated warm-up.
 
-Made for corpus-growth studies: run it once per corpus configuration
-(the evaluation set stays valid on any corpus that contains the
-original one) and compare the rows.
+Made for corpus-growth studies: run once per corpus configuration and
+compare the rows. Writes: results/quality-<config>-<timestamp>.json.
 """
 
 from __future__ import annotations

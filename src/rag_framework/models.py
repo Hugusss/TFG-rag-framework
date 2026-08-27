@@ -1,24 +1,11 @@
 """Canonical data model shared by every pipeline component.
 
-The rest of the pipeline depends on these types, never on a raw dataset
-format (assignment spec, section 7). All types are frozen dataclasses:
-components exchange values, they do not mutate shared state. Freezing is
-shallow — the ``metadata`` dictionaries themselves remain mutable, so
-components must treat received metadata as read-only.
-
-Identifier scheme (spec section 7, "Stable identifiers"):
-
-- ``document_id``: the publisher's stable identifier when the source
-  provides one (loaders decide; the OWI ``record_id`` is adopted as-is),
-  otherwise ``make_document_id(source_identifier)``.
-- ``chunk_id``: always ``make_chunk_id(document_id, position, text)``.
-
-Both functions are pure and deterministic, so re-ingesting unchanged input
-produces identical ids — the property deduplication relies on.
-
-Score convention: ``SearchResult.score`` is a similarity, HIGHER IS BETTER.
-Vector-store adapters convert their native distance metrics before
-returning results.
+Components depend on these types, never on a raw dataset format, and
+exchange them as values: all are frozen dataclasses. Freezing is shallow,
+so received ``metadata`` dictionaries must be treated as read-only.
+Defined here too: the deterministic id functions every seam relies on for
+idempotent re-ingestion, and the convention that ``SearchResult.score``
+is always a similarity — higher is better, whatever the backend returns.
 """
 
 from __future__ import annotations
@@ -73,9 +60,9 @@ def make_chunk_id(document_id: str, position: int, text: str) -> str:
 class Rejection:
     """One skipped input record: where it came from and why.
 
-    The shared honesty currency (Rule 6): loaders and chunkers append
-    these instead of silently dropping data, and ingestion reports
-    count them.
+    Loaders and chunkers append these instead of dropping data quietly,
+    and ingestion reports count them, so "handled" never turns into
+    "hidden".
     """
 
     source: str
@@ -140,8 +127,8 @@ class RAGResult:
 class IngestionReport:
     """Counters and timings every ingestion run must produce.
 
-    All fields are required so an ingestion cannot silently omit one
-    (spec sections 8 and 17.1).
+    All fields are required, so an ingestion cannot omit a counter by
+    forgetting to set it.
     """
 
     documents_read: int
@@ -162,7 +149,10 @@ def stable_bucket(key: str, buckets: int) -> int:
     ``buckets``. Stable across processes, machines and Python versions
     (unlike ``hash()``, which is salted per process for strings); used
     for partition assignment and for corpus sampling, so both agree on
-    what a "stable" assignment means (ADR-006, ADR-011)."""
+    what a "stable" assignment means (ADR-006, ADR-011).
+
+    Cost: one hash of the key, independent of ``buckets`` and of how
+    many keys have been bucketed before."""
     if isinstance(buckets, bool) or not isinstance(buckets, int):
         raise TypeError(f"buckets must be an int, got {type(buckets).__name__}")
     if buckets < 1:

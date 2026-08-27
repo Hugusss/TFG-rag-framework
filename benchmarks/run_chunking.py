@@ -1,21 +1,14 @@
-"""Chunk-size experiment (spec sections 9 and 18, Experiment D).
+"""Chunk-size experiment: how chunk boundaries change cost and quality.
 
-Runs the three self-chunked configurations (small/medium/large,
-recursive strategy with live encoding) plus the publisher baseline
-(official chunks and vectors) over the same corpus and evaluation
-queries, and writes one raw result file per configuration through the
-metrics layer.
+Runs three self-chunked configurations (small/medium/large, recursive
+strategy with live encoding) plus the publisher baseline (official
+chunks and vectors) over the same corpus and evaluation queries, each
+into its own store directory so index sizes stay comparable. Records
+chunk count, index size, ingestion time, per-stage latency and
+document-level quality; the medium run also measures the corpus
+word-to-subword ratio behind the "token = whitespace word" policy.
 
-Measured per configuration (spec section 9): chunk count, index size,
-ingestion time (embedding/indexing split), retrieval latency
-(per-stage summaries over the query set), and document-level retrieval
-quality (Recall@k, Precision@k, MRR) on the answerable evaluation
-queries, plus top-score summaries for the unanswerable ones. The
-medium run also records the corpus word-to-subword-token ratio so the
-project's "token = whitespace word" policy carries a measured constant.
-
-Each configuration ingests into its own store directory, so index-size
-numbers are isolated. Latency statistics exclude a stated warm-up.
+Writes: results/chunkexp-<configuration>-<timestamp>.json.
 """
 
 from __future__ import annotations
@@ -57,7 +50,7 @@ DATASET_VERSION = "owi-v2.0.0-gpu-spa-2026-07-28"
 WARM_UP_QUERIES = 3
 
 # name -> (target_tokens, overlap_tokens, minimum_tokens); minimum is
-# target/10, scaled like the spec's section-9 example (500 -> 50)
+# overlap is a tenth of the target, the conventional 500 -> 50 ratio
 RECURSIVE_CONFIGS = {
     "small": (200, 20, 20),
     "medium": (500, 50, 50),
@@ -289,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
                 ]
             )
             if child.returncode != 0:
-                # an incomplete sweep must never look complete (Rule 6)
+                # an incomplete sweep must never look complete
                 _logger.error(
                     "configuration %s failed with exit code %d; aborting"
                     " the remaining configurations",

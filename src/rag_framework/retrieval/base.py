@@ -12,8 +12,7 @@ class RetrievalError(Exception):
 
     Invalid merge input (non-finite scores, bad ``k``), impossible
     partition arguments, or a worker failure in collective mode — all
-    surface as this type, never as a partial or reordered result list
-    (Rule 6).
+    surface as this type, never as a partial or reordered result list.
     """
 
 
@@ -29,12 +28,12 @@ class Retriever(ABC):
       ``total_seconds``. Result conversion — the backend-row to
       SearchResult construction, including score conversion — happens
       inside the vector store adapter (ADR-003), so it is included in
-      ``search_seconds`` and never a separate stage (the documented
-      deviation from the spec's section-12 stage list). ``timings`` is
+      ``search_seconds``; a separate conversion stage would be
+      accounting fiction. ``timings`` is
       reset at the start of each call — read it before the next one.
     - Failures from the embedding or store seams propagate as their
       own typed errors; retrievers add no error translation and never
-      degrade to partial results silently (Rule 6).
+      degrade to partial results silently.
     """
 
     def __init__(self) -> None:

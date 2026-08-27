@@ -1,14 +1,13 @@
-"""Regenerate the required plots (spec section 19) from saved raw results.
+"""Regenerate the eight result figures from saved raw results.
 
-Every figure is drawn from a result file written by the metrics layer
-— never from values typed here — and is stamped with the source file
-name and the git commit recorded in its manifest. Axes carry units,
-sequential and collective modes are visually distinct, and latency
-points show the median with a [min, p95] range. A missing source is an
+Every figure is drawn from a result file written by the metrics layer —
+never from values typed here — and is stamped with the source file name
+and the git commit recorded in its manifest. A missing source is an
 error, never a placeholder figure.
 
-Requires the optional ``plots`` extra (``pip install -e ".[plots]"``);
-the framework itself never imports matplotlib (ADR-012).
+Reads: results/*.json. Writes: figures/01-*.png .. figures/08-*.png.
+Requires the optional ``plots`` extra; the framework itself never
+imports matplotlib (ADR-012).
 """
 
 from __future__ import annotations
@@ -79,7 +78,7 @@ def finish(fig, axis, title: str, source: str, output: Path, name: str) -> Path:
 
 
 def plot_ingestion_vs_chunks(results: Path, output: Path) -> Path:
-    """§19.1 — ingestion time versus number of chunks."""
+    """Plot 1 — ingestion time versus number of chunks."""
     fig, axis = plt.subplots(figsize=(7, 4.5))
     dataset_path = latest(results, "scaling-dataset")
     dataset = load(dataset_path)
@@ -115,7 +114,7 @@ def plot_ingestion_vs_chunks(results: Path, output: Path) -> Path:
 
 
 def plot_latency_vs_dataset(results: Path, output: Path) -> Path:
-    """§19.2 — retrieval latency versus dataset size."""
+    """Plot 2 — retrieval latency versus dataset size."""
     path = latest(results, "scaling-dataset")
     payload = load(path)
     rows = payload["rows"]
@@ -137,7 +136,7 @@ def plot_latency_vs_dataset(results: Path, output: Path) -> Path:
 
 
 def plot_latency_vs_workers(results: Path, output: Path) -> Path:
-    """§19.3 — retrieval latency versus number of workers."""
+    """Plot 3 — retrieval latency versus number of workers."""
     path = latest(results, "scaling-workers")
     payload = load(path)
     rows = payload["rows"]
@@ -166,7 +165,7 @@ def plot_latency_vs_workers(results: Path, output: Path) -> Path:
 
 
 def plot_latency_vs_partitions(results: Path, output: Path) -> Path:
-    """§19.4 — retrieval latency versus number of partitions."""
+    """Plot 4 — retrieval latency versus number of partitions."""
     path = latest(results, "scaling-partitions")
     payload = load(path)
     rows = payload["rows"]
@@ -195,7 +194,7 @@ def plot_latency_vs_partitions(results: Path, output: Path) -> Path:
 
 
 def plot_worker_time_distribution(results: Path, output: Path) -> Path:
-    """§19.5 — worker-time distribution and partition imbalance."""
+    """Plot 5 — worker-time distribution and partition imbalance."""
     path = latest(results, "scaling-partitions")
     payload = load(path)
     collective = [r for r in payload["rows"] if r["mode"] == "collective" and "partition_mean_seconds" in r["timings"]]
@@ -219,7 +218,7 @@ def plot_worker_time_distribution(results: Path, output: Path) -> Path:
 
 
 def plot_merge_vs_candidates(results: Path, output: Path) -> Path:
-    """§19.6 — merge time versus number of candidates."""
+    """Plot 6 — merge time versus number of candidates."""
     path = latest(results, "scaling-partitions")
     payload = load(path)
     collective = [r for r in payload["rows"] if r["mode"] == "collective"]
@@ -239,7 +238,7 @@ def plot_merge_vs_candidates(results: Path, output: Path) -> Path:
 
 
 def plot_overlap_vs_partitions(results: Path, output: Path) -> Path:
-    """§19.7 — top-k overlap versus number of partitions."""
+    """Plot 7 — top-k overlap versus number of partitions."""
     path = latest(results, "correctness")
     payload = load(path)
     layouts = payload["layouts"]
@@ -260,7 +259,7 @@ def plot_overlap_vs_partitions(results: Path, output: Path) -> Path:
 
 
 def plot_quality_vs_chunk_size(results: Path, output: Path) -> Path:
-    """§19.8 — retrieval quality versus chunk size."""
+    """Plot 8 — retrieval quality versus chunk size."""
     names = ("publisher", "small", "medium", "large")
     payloads, sources = [], []
     for name in names:
@@ -310,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results", default="./results")
     parser.add_argument("--output", default="./figures")
-    parser.add_argument("--only", nargs="+", type=int, choices=sorted(PLOTS), help="plot numbers (spec section 19)")
+    parser.add_argument("--only", nargs="+", type=int, choices=sorted(PLOTS), help="plot numbers to regenerate (default: all)")
     args = parser.parse_args(argv)
     results, output = Path(args.results), Path(args.output)
     output.mkdir(parents=True, exist_ok=True)

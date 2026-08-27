@@ -12,21 +12,20 @@ class EmbeddingError(Exception):
 
     A chunk without its official vector, inconsistent dimensions, or
     corrupt vector data mean the experiment cannot be what it claims.
-    Embedding problems are never repaired silently (Rule 6): no
-    skipping, no padding, no quiet re-encoding.
+    Embedding problems are never repaired silently: no skipping, no
+    padding, no quiet re-encoding.
     """
 
 
 class EmbeddingProvider(ABC):
     """Turns chunks and queries into vectors.
 
-    ``embed_documents`` deliberately takes Chunks, not bare strings —
-    a documented deviation from the spec's sketch (ADR-005): adapters
-    that look vectors up by *identity* (the precomputed provider is
-    keyed by ``(document_id, position)``) cannot express that lookup
-    through a text-only interface without side channels, which would
-    force exactly the orchestrator branch ADR-002 forbids. Providers
-    that only need text simply read ``chunk.text``.
+    ``embed_documents`` takes Chunks rather than bare strings (ADR-005):
+    a provider that looks vectors up by *identity* — the precomputed one
+    is keyed by ``(document_id, position)`` — cannot express that lookup
+    through a text-only interface without a side channel, and a side
+    channel would put corpus knowledge back into the orchestrator.
+    Providers that only need text simply read ``chunk.text``.
 
     Contract for every implementation:
 
@@ -36,16 +35,16 @@ class EmbeddingProvider(ABC):
       skipping, padding, or re-encoding.
     - ``embed_query`` embeds free text (queries have no identity) with
       the same model, dimension, and normalization as document vectors
-      — mixing embedding spaces in one collection is forbidden
-      (spec section 10). An adapter whose query path is not yet
+      — one collection holds one embedding space, never a mixture.
+      An adapter whose query path is not yet
       available must fail loudly (``NotImplementedError`` naming the
       reason), never return a degraded vector.
     - Deterministic: the same inputs produce the same vectors.
     - The embedding identity is machine-readable: ``model_id``,
       ``dimension``, and ``normalized`` describe the embedding space,
-      and ``device`` records where encoding executes (space-independent,
-      but required for the spec-section-10 run record — latencies are
-      meaningless without it). The vector-store layer stamps collection
+      and ``device`` records where encoding executes: it does not change
+      the space, but a latency without it is uninterpretable. The
+      vector-store layer stamps collection
       metadata and result files carry the record without any component
       hardcoding model facts outside this seam.
     """

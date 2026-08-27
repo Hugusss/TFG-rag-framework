@@ -1,43 +1,11 @@
-"""Configuration seam: YAML file to validated, typed configuration.
+"""Configuration seam: a YAML file becomes a validated, typed configuration.
 
-:func:`load_config` is the only entry point. It parses a spec-section-15
-shaped YAML file into frozen dataclasses, failing fast with a
-:class:`ConfigError` whose message names the exact offending key
-(``retrieval.k``, not "invalid config") for any structural problem:
-missing file, malformed YAML, missing or unknown sections and keys, wrong
-types, or values that contradict each other.
-
-Validation boundaries — what is checked where:
-
-- **Here**: structure and topology. Every key exists with the right type,
-  and value-dependent shapes are coherent: ``chunking.strategy:
-  publisher_offsets`` admits no token sizes, ``retrieval.mode:
-  sequential`` admits only one partition and one worker, a serial
-  executor admits one worker. Coherence
-  *across* seams (e.g. a chunking strategy incompatible with an
-  embedding provider) is adapter semantics, not config topology — it
-  is checked at the wiring point (pipeline construction), still before
-  any work runs.
-- **Component factories** (later increments): whether a component name
-  such as ``dataset.loader: owi`` or ``vector_store.type: chroma`` is
-  registered. Names are open sets that grow with adapters; their shape
-  here stays fixed, so config does not change when an adapter is added.
-- **Components at run time**: filesystem facts (paths existing, being
-  readable). A config must parse on a machine that does not hold the
-  data.
-
-No value coercion anywhere: YAML already types scalars, so ``k: "10"`` is
-an error and never silently the integer ten — a typo must not change an
-experiment. Unknown keys are rejected for the same reason: a misspelled
-parameter must fail loudly, not silently fall back to a default.
-
-Deliberate strictness beyond the spec's literal examples: duplicate YAML
-keys are rejected instead of the parser's silent last-wins;
-``minimum_tokens`` is required for the ``recursive`` strategy (the spec's
-section-9 chunking example lists it, its shorter section-15 example omits
-it — an experiment must state its minimum chunk size explicitly); and
-optional keys are expressed by omission, so an explicit ``null`` is
-rejected like any other wrong type.
+:func:`load_config` is the only entry point. It parses the file into the
+frozen dataclasses defined here and raises :class:`ConfigError` naming
+the exact offending key (``retrieval.k``, not "invalid config") for every
+failure: missing file, malformed YAML, unknown sections or keys, wrong
+types, or values that contradict one another. Scalars are never coerced,
+so a typo cannot quietly change what an experiment runs.
 """
 
 from __future__ import annotations
@@ -75,7 +43,7 @@ class _UniqueKeyLoader(yaml.SafeLoader):
 
 @dataclass(frozen=True, slots=True)
 class DatasetConfig:
-    """``version`` names the corpus for reproducibility (Rule 9), e.g.
+    """``version`` names the corpus a result was produced from, e.g.
     ``owi-v2.0.0-gpu-spa-2026-07-28`` — the path alone is machine-local
     and identifies nothing."""
 
@@ -172,6 +140,8 @@ def _take(section: dict, key: str, expected: type, path: str, default=_MISSING):
         if default is _MISSING:
             raise ConfigError(f"missing key: {path}.{key}")
         return default
+    # an optional key is expressed by omission, so an explicit `null`
+    # falls through to the type check and is rejected like any wrong type
     # bool is a subclass of int in Python; "k: true" must not pass as int
     if expected is int and isinstance(value, bool):
         raise ConfigError(f"{path}.{key}: expected int, got bool")
@@ -224,6 +194,8 @@ def _parse_chunking(section: dict) -> ChunkingConfig:
     if strategy == "recursive":
         target = _take(section, "target_tokens", int, "chunking")
         overlap = _take(section, "overlap_tokens", int, "chunking")
+        # required, not defaulted: the minimum size silently decides which
+        # tail fragments are dropped, so an experiment must state it
         minimum = _take(section, "minimum_tokens", int, "chunking")
         if target <= 0:
             raise ConfigError("chunking.target_tokens: must be positive")

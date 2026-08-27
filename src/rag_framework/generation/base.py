@@ -9,7 +9,7 @@ from rag_framework.models import SearchResult
 
 class GenerationError(Exception):
     """A condition that invalidates generation (model failure,
-    timeout). Never silently degraded into an empty answer (Rule 6)."""
+    timeout). Never silently degraded into an empty answer."""
 
 
 class Generator(ABC):
@@ -19,15 +19,14 @@ class Generator(ABC):
 
     - :meth:`generate` returns the answer text; it must ground itself
       in the given context and degrade honestly when the context is
-      empty (say so — never invent). Prompt construction — the spec's
-      section-14 stage — happens entirely inside the implementation;
-      no other component knows what a prompt is (Rule 2).
+      empty (say so — never invent). Prompt construction happens entirely
+      inside the implementation; no other component knows what a
+      prompt is, so swapping models never touches the pipeline.
     - Deterministic implementations state so; sampling ones record
       their parameters. The mock is fully deterministic.
     - Failures raise :class:`GenerationError`; credentials, if any,
-      come from the environment, never from source code (spec
-      section 14 — this project extends the rule to configuration
-      files).
+      come from the environment, never from source code or from a
+      configuration file kept in the repository.
     """
 
     @abstractmethod

@@ -1,16 +1,14 @@
-"""Dataset-size scaling experiment (spec section 18, Experiment A).
+"""Dataset-size experiment: behaviour as the corpus grows.
 
 Holds the retrieval configuration constant and grows the corpus through
 deterministic, nested subsets (``dataset.sample_percent``, ADR-011).
-For each subset: a **freshly built** index in its own directory under a
-per-run folder (index sizes are only comparable between fresh builds;
-the script never deletes anything), then the required
-measurements — index construction time and size, median and p95
-retrieval latency, retrieval throughput — plus document-level quality
-on the evaluation set, reported next to the fraction of relevant
-documents the subset still contains (the queries were written against
-the full corpus, so falling recall on a subset measures sampling, not
-retrieval). One raw result file through the metrics layer.
+Each subset gets a freshly built index in its own directory — index
+sizes are only comparable between fresh builds, and the script never
+deletes anything. Records construction time and size, median and p95
+latency, throughput, and quality reported next to the fraction of
+relevant documents the subset still contains.
+
+Writes: results/scaling-dataset-<timestamp>.json.
 """
 
 from __future__ import annotations

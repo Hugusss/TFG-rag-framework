@@ -1,4 +1,4 @@
-"""Unit tests for the spec section 13.5 ranking comparisons."""
+"""Unit tests for the ranking comparisons between two result lists."""
 
 import pytest
 

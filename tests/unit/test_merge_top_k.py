@@ -1,5 +1,4 @@
-"""Unit tests for the global top-k merge, independent of any store
-(spec section 13.4's required cases)."""
+"""Unit tests for the global top-k merge, independent of any store."""
 
 import logging
 import math

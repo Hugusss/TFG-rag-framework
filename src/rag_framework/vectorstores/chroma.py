@@ -1,27 +1,11 @@
 """ChromaDB adapter for the VectorStore seam.
 
-The only module in the project that may import chromadb (Rule 2).
-
-Distance-to-score conversion (ADR-003): collections are created with
-the cosine space, Chroma returns cosine *distance* (lower is better),
-and this adapter converts at its boundary: ``score = 1 - distance``,
-so ``SearchResult.score`` is a similarity, higher is better.
-
-Idempotent ingestion: chunk ids are deterministic, so ``add`` uses
-upsert semantics — re-ingesting unchanged data overwrites identical
-entries instead of duplicating them. Duplicate ids *within* one batch
-are rejected: they would silently collapse two chunks into one row.
-
-Embedding-space guard (spec sections 10 and 22): the collection stores
-the embedding configuration (model id, dimension, normalization) in its
-metadata at creation, taken from the provider's machine-readable
-identity. Opening an existing collection with a conflicting
-configuration raises — an index built in one embedding space must never
-be silently queried in another. The guard compares only the identity
-keys the caller *expects*: a store constructed without
-``collection_metadata`` declares no expectations and opens any
-collection (deliberate escape hatch for inspection tooling — the
-orchestrator always passes the provider's identity).
+The only module in the project that imports chromadb; everything
+backend-specific stays behind this boundary — the cosine space and its
+distance-to-similarity conversion (ADR-003), upsert semantics, batch
+limits and metadata encoding. Collections are stamped at creation with
+the embedding space they hold, and reopening one under a conflicting
+identity raises instead of quietly searching the wrong vectors.
 """
 
 from __future__ import annotations
@@ -110,6 +94,10 @@ class ChromaVectorStore(VectorStore):
                 f" '{space}', expected 'cosine': scores would be"
                 " converted wrongly (ADR-003)"
             )
+        # only the keys the caller actually declares are compared: a store
+        # built without collection_metadata states no expectations and can
+        # open anything, which inspection tooling needs. The orchestrator
+        # always passes the provider's identity, so real runs are guarded.
         for key in _IDENTITY_KEYS:
             expected = self._metadata.get(key)
             if expected is not None and stored.get(key) != expected:
@@ -151,6 +139,9 @@ class ChromaVectorStore(VectorStore):
             return
         ids = [chunk.chunk_id for chunk in chunks]
         if len(set(ids)) != len(ids):
+            # upsert makes re-ingestion idempotent across batches, but
+            # within one batch it would collapse two distinct chunks into
+            # a single row and report both as stored
             raise VectorStoreError(
                 "duplicate chunk ids within one add() batch"
             )
@@ -277,12 +268,11 @@ class ChromaVectorStore(VectorStore):
     @staticmethod
     def _chunk_metadata(chunk: Chunk) -> dict:
         """Per-row metadata as stored: the chunk's metadata plus the
-        reserved provenance keys ``document_id`` and ``position``
-        (spec section 7).
+        reserved provenance keys ``document_id`` and ``position``.
 
         A non-scalar metadata value or a reserved-key collision raises:
-        silently dropping a value would make later filters on it return
-        nothing, with no trace (Rule 6).
+        dropping a value quietly would make later filters on it return
+        nothing, with no trace of why.
         """
         metadata: dict = {}
         for key, value in chunk.metadata.items():

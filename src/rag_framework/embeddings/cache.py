@@ -1,17 +1,11 @@
-"""Disk cache decorator for embedding providers (spec section 10).
+"""Disk cache decorator for embedding providers.
 
-Wraps any :class:`EmbeddingProvider` and persists document vectors
-keyed by ``chunk_id`` — which is deterministic over (document, position,
-normalized text), so a cache hit is exact by construction. Vectors are
-appended as parquet shards, one per ``embed_documents`` call that
-produced misses, making long encodes resumable: a killed run loses at
-most one call's worth of work, and repeated experiments over the same
-chunks skip encoding entirely.
-
-The cache belongs to one embedding model: ``meta.json`` records the
-``model_id`` and the cache refuses to open under a different one
-(mixing embedding spaces is the corpus sin this project keeps
-refusing). Query embedding is never cached — queries are ad hoc.
+Wraps any :class:`EmbeddingProvider` and persists document vectors keyed
+by ``chunk_id``, which is deterministic over (document, position,
+normalized text), so a hit is exact by construction. Vectors are
+appended as parquet shards, one per call that produced misses, which
+makes a long encode resumable. The cache belongs to a single embedding
+model and refuses to open under another; queries are never cached.
 """
 
 from __future__ import annotations

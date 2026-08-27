@@ -1,4 +1,4 @@
-"""Unit tests for deterministic partition assignment (spec section 13.3)."""
+"""Unit tests for deterministic partition assignment and grouping."""
 
 from collections import Counter
 

@@ -1,20 +1,12 @@
 """Live embedding adapter over sentence-transformers.
 
-Encoding recipe — kept byte-exact with the reference encoder on the
-rack that validated the official corpus vectors (ADR-009):
+Encodes text with the same recipe that produced the corpus's official
+vectors (ADR-009), which is the whole contract of this module:
 
     SentenceTransformer(model_id, trust_remote_code=True, device="cpu")
     model.encode(texts, task="retrieval", normalize_embeddings=True)
 
-Any drift in this recipe silently produces vectors from a different
-embedding space — the corpus's own history shows what that costs — so
-the exact call is pinned by unit tests via a recording stub.
-
-The model loads lazily on first use: as the query-encoding delegate of
-the precomputed provider this class must cost nothing at pipeline
-construction, because ingestion never encodes. Tests inject a stub
-``encoder_factory``; the real model is exercised by the manual
-verification runs documented in walkthrough 08, never by pytest.
+The model loads on first use; tests inject a stub ``encoder_factory``.
 """
 
 from __future__ import annotations
@@ -33,6 +25,10 @@ def _load_sentence_transformer(model_id: str):
     # when a live encoder is actually needed
     from sentence_transformers import SentenceTransformer
 
+    # trust_remote_code executes model-repository code; the risk is
+    # accepted knowingly because the reference encoder that validated the
+    # corpus vectors is built the same way, and any deviation here would
+    # produce vectors from a subtly different embedding space
     return SentenceTransformer(model_id, trust_remote_code=True, device="cpu")
 
 
@@ -68,7 +64,7 @@ class LocalEmbeddingProvider(EmbeddingProvider):
         self.model_id = model_id
         self.normalized = True  # the reference recipe normalizes
         self.device = "cpu"  # the reference recipe's execution device
-        self.batch_size = batch_size or 32  # machine-readable (spec §10)
+        self.batch_size = batch_size or 32
         self.revision: str | None = None  # resolved HF revision after load
         self._encoder_factory = encoder_factory or _load_sentence_transformer
         self._encoder = None

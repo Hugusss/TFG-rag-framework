@@ -1,14 +1,12 @@
-"""Collective retrieval: partitioned local search + global merge
-(spec section 13) — a *local simulation*, not a distributed system.
+"""Collective retrieval: partitioned local search plus a global merge.
 
     query -> query embedding -> broadcast to P partition searches
           -> (executor runs them on W workers) -> merge_top_k -> top-k
 
-The retriever owns the query flow and its timing only: partition
-layout belongs to the PartitionedVectorStore, concurrency to the
-Executor, the reduction to merge_top_k. A failed partition search
-fails the query with the partition and worker named (Rule 6); there
-are no silent partial results.
+This retriever owns the query flow and its timing only: layout belongs
+to the PartitionedVectorStore, concurrency to the Executor, reduction
+to merge_top_k. Workers are local, so this simulates a distributed
+search rather than being one.
 """
 
 from __future__ import annotations
@@ -37,8 +35,9 @@ class CollectiveRetriever(Retriever):
         self._provider = embedding_provider
         self._store = store
         self._executor = executor
-        # per-partition detail of the last call (spec section 18 B:
-        # worker times, candidates, imbalance); reset with timings
+        # per-partition detail of the last call — worker times, candidate
+        # counts, imbalance — emitted on the normal query path so scaling
+        # runs need no separate instrumentation; reset with timings
         self.partition_searches: list[dict] = []
 
     def retrieve(self, query: str, k: int) -> list[SearchResult]:
@@ -58,6 +57,10 @@ class CollectiveRetriever(Retriever):
         )
         self.timings["search_seconds"] = time.perf_counter() - start
 
+        # the executor reports failures as data; turning them into a failed
+        # query is this layer's decision. Answering from the partitions that
+        # did succeed would look like a complete result over a silently
+        # smaller corpus, so one lost partition loses the query.
         failed = [outcome for outcome in outcomes if not outcome.ok]
         if failed:
             first = failed[0]

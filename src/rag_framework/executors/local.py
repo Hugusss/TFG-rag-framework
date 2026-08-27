@@ -1,10 +1,8 @@
 """Local executors: serial (the reference) and a thread pool.
 
-Threads are the first local simulation (spec section 13.2). Whether
-they scale is an empirical question for Experiment C: vector search in
-the Chroma backend runs in native code that may release the GIL, and
-local contention may still cancel the gain — the spec asks for that
-measurement, not an assumption (Rule 7).
+Whether threads actually help is left as something to measure, not to
+assume: vector search runs in backend native code that may release the
+GIL, while memory and cache contention can cancel the gain.
 """
 
 from __future__ import annotations

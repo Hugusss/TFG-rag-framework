@@ -1,19 +1,14 @@
-"""Collective-correctness experiment (spec sections 13.5 and 18, Experiment E).
+"""Collective-correctness experiment: is the merged answer the right one?
 
-For every evaluation query, compares three answers over the same
-vectors, embedding model and distance metric:
+For every evaluation query it compares three answers over the same
+vectors, model and metric: the exact top-k (brute-force cosine over
+every stored vector), the sequential baseline, and the collective result
+for each partition count given. The exact answer is what makes a
+difference attributable, since baseline and collective are both
+approximate. Records overlap, positions preserved, discordant pairs,
+score differences and a classification of every difference.
 
-- the **exact** top-k (brute-force cosine over every stored vector,
-  metrics/exact.py) — the reference that makes differences attributable;
-- the **baseline**: sequential search over the full collection;
-- the **collective** top-k for each partition count given.
-
-Per query and layout it records overlap, positions preserved,
-discordant pairs, score differences, recall relative to the baseline
-and to the exact reference, and a classification of every difference
-(tie reorder / HNSW miss in the baseline / miss in a partition /
-outside the exact top-k). One raw result file through the metrics
-layer; plots come later from that file, never from this script.
+Writes: results/correctness-<timestamp>.json.
 """
 
 from __future__ import annotations

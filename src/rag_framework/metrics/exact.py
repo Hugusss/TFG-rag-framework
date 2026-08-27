@@ -1,14 +1,11 @@
-"""Exact nearest-neighbour reference (spec section 13.5).
+"""Exact nearest-neighbour reference by brute force.
 
-Brute-force cosine similarity over every stored vector, in pure
-Python (``math.sumprod`` is C-implemented: the whole 6k × 1024 corpus
-scores in ~40 ms per query). It exists because both retrieval modes
-search HNSW graphs, which are *approximate*: comparing two approximate
-answers cannot tell which one is wrong. This function can.
-
-Ordering is the same total order as ``merge_top_k`` — score
-descending, then ``chunk_id`` — so exact ties are never attributed to
-either index.
+Cosine similarity against every stored vector, in pure Python
+(``math.sumprod`` is C-implemented). It exists because both retrieval
+modes search approximate HNSW graphs, and comparing two approximate
+answers to each other cannot say which one is wrong. Ordering is the
+same total order as ``merge_top_k``, so a tie is never scored as a
+difference between indexes.
 """
 
 from __future__ import annotations
@@ -68,6 +65,11 @@ def exact_top_k_many(
     small buffer above ``k`` absorbs score ties (duplicate texts have
     identical vectors) so the final ``(score desc, chunk_id)`` order
     matches the single-query function.
+
+    Cost: O(N * Q * d) time for ``N`` stored vectors, ``Q`` queries and
+    ``d`` dimensions — the price of an exact answer, and the reason this
+    is a reference rather than a retrieval mode — but only O(Q * k)
+    memory, which is what makes it usable at corpus scale.
     """
     if isinstance(k, bool) or not isinstance(k, int) or k < 1:
         raise ValueError(f"k must be a positive int, got {k!r}")
