@@ -29,7 +29,6 @@ vector_store:
   ef_search: 800
 
 retrieval:
-  mode: sequential
   k: 10
 
 generation:

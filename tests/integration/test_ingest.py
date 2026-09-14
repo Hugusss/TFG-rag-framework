@@ -86,7 +86,9 @@ def write_corpus(root: Path, docs=DOCS) -> None:
     )
 
 
-def write_config(tmp_path: Path, retrieval=None) -> Path:
+def write_config(tmp_path: Path, retrieval=None, partitions=None) -> Path:
+    """``partitions`` is an index property, so it lands in the
+    ``vector_store`` section; ``retrieval`` holds query-side settings."""
     config = {
         "dataset": {"loader": "owi", "path": str(tmp_path / "corpus")},
         "chunking": {"strategy": "publisher_offsets"},
@@ -100,9 +102,11 @@ def write_config(tmp_path: Path, retrieval=None) -> Path:
             "path": str(tmp_path / "state"),
             "collection": "test-col",
         },
-        "retrieval": retrieval or {"mode": "sequential", "k": 10},
+        "retrieval": retrieval or {"k": 10},
         "metrics": {"output": str(tmp_path / "results")},
     }
+    if partitions is not None:
+        config["vector_store"]["partitions"] = partitions
     path = tmp_path / "config.yaml"
     path.write_text(yaml.safe_dump(config), encoding="utf-8")
     return path
@@ -405,8 +409,7 @@ def test_collective_mode_end_to_end(tmp_path, capsys, monkeypatch):
     )
     write_corpus(tmp_path / "corpus")
     config_path = write_config(
-        tmp_path,
-        retrieval={"mode": "collective", "k": 10, "partitions": 2, "workers": 2},
+        tmp_path, retrieval={"k": 10, "workers": 2}, partitions=2
     )
     assert main(["ingest", "--config", str(config_path)]) == 0
     ingest_payload = json.loads(
@@ -454,7 +457,8 @@ def test_correctness_benchmark_end_to_end(tmp_path, monkeypatch):
     collective_dir.mkdir()
     config = yaml.safe_load(baseline.read_text())
     config["vector_store"]["path"] = str(collective_dir / "state")
-    config["retrieval"] = {"mode": "collective", "k": 10, "partitions": 2, "workers": 1, "executor": "serial"}
+    config["vector_store"]["partitions"] = 2
+    config["retrieval"] = {"k": 10, "executor": "serial"}
     collective = collective_dir / "config.yaml"
     collective.write_text(yaml.safe_dump(config), encoding="utf-8")
     assert main(["ingest", "--config", str(collective)]) == 0
@@ -502,7 +506,8 @@ def test_scaling_benchmark_end_to_end(tmp_path, monkeypatch):
         layout_dir.mkdir()
         config = yaml.safe_load(baseline.read_text())
         config["vector_store"]["path"] = str(layout_dir / "state")
-        config["retrieval"] = {"mode": "collective", "k": 10, "partitions": partitions, "workers": partitions}
+        config["vector_store"]["partitions"] = partitions
+        config["retrieval"] = {"k": 10, "workers": partitions}
         path = layout_dir / "config.yaml"
         path.write_text(yaml.safe_dump(config), encoding="utf-8")
         assert main(["ingest", "--config", str(path)]) == 0

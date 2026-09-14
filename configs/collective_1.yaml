@@ -26,13 +26,12 @@ vector_store:
   type: chroma
   path: ./state/chroma-collective-p1
   collection: owi-spa0728-publisherchunks-jinav5small-v1
+  partitions: 1
 
 retrieval:
-  mode: collective
   k: 10
-  partitions: 1
-  workers: 1
   executor: threads
+  workers: 1
 
 generation:
   enabled: false

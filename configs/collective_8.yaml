@@ -1,8 +1,10 @@
-# Collective retrieval over 8 partitions: the same official OWI chunks
-# and precomputed vectors as local_chroma.yaml, ingested into one Chroma
-# collection per partition (named <collection>-pNNof08) and searched by
-# 8 threads with a global top-k merge. A local simulation of collective
-# retrieval, not a distributed system.
+# An eight-partition index: the same official OWI chunks and precomputed
+# vectors as local_chroma.yaml, ingested into one Chroma collection per
+# partition (named <collection>-pNNof08). The partition count is a
+# property of the index; how many threads search it is a property of
+# the query and can change without touching the index (here 8; see
+# collective_8_serial.yaml for the same index searched in series).
+# A local simulation of collective retrieval, not a distributed system.
 #
 # Each partition count gets its own store directory so index sizes
 # are measured per layout; the baseline collection lives in ./state/chroma.
@@ -24,13 +26,12 @@ vector_store:
   type: chroma
   path: ./state/chroma-collective-p8
   collection: owi-spa0728-publisherchunks-jinav5small-v1
+  partitions: 8            # identity of the index: collections <collection>-pNNof08
 
 retrieval:
-  mode: collective
   k: 10
-  partitions: 8
-  workers: 8
   executor: threads
+  workers: 8               # a query-time choice, not a property of the index
 
 generation:
   enabled: false

@@ -24,13 +24,12 @@ vector_store:
   # measured first with the backend default (see the paired report),
   # then with the width that restores exact agreement at growth scale
   ef_search: 800
+  partitions: 8
 
 retrieval:
-  mode: collective
   k: 10
-  partitions: 8
-  workers: 8
   executor: threads
+  workers: 8
 
 generation:
   enabled: false

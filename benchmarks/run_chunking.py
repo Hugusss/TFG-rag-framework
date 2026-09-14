@@ -88,7 +88,7 @@ def pipeline_config(name: str, args) -> PipelineConfig:
             path=str(Path(args.state) / name),
             collection=collection,
         ),
-        retrieval=RetrievalConfig(mode="sequential", k=args.k),
+        retrieval=RetrievalConfig(k=args.k),
         generation=GenerationConfig(),
         metrics=MetricsConfig(output=args.output),
     )

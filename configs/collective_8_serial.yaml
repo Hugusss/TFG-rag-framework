@@ -1,0 +1,34 @@
+# The eight-partition index of collective_8.yaml searched by the serial
+# executor: one partition after another on the calling thread, then the
+# global top-k merge. Same index directory, same collections; only the
+# query side differs, which is what makes the two files comparable.
+
+dataset:
+  loader: owi
+  path: ./data/owi
+  version: owi-v2.0.0-gpu-spa-2026-07-28
+
+chunking:
+  strategy: publisher_offsets
+
+embedding:
+  provider: precomputed
+  model: jinaai/jina-embeddings-v5-text-small
+  normalize: true
+
+vector_store:
+  type: chroma
+  path: ./state/chroma-collective-p8
+  collection: owi-spa0728-publisherchunks-jinav5small-v1
+  partitions: 8            # identity of the index: collections <collection>-pNNof08
+
+retrieval:
+  k: 10
+  executor: serial         # P searches in series, one worker; merge_top_k as always
+
+generation:
+  enabled: false
+  provider: mock
+
+metrics:
+  output: ./results

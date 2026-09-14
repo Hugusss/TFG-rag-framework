@@ -6,7 +6,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from rag_framework.config import ConfigError, load_config
+from rag_framework.config import (
+    ConfigError,
+    layout_mode,
+    load_config,
+    resolved_execution,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -32,7 +37,7 @@ def base() -> dict:
             "path": "./state/chroma",
             "collection": "owi-main",
         },
-        "retrieval": {"mode": "sequential", "k": 10, "partitions": 1, "workers": 1},
+        "retrieval": {"k": 10},
         "generation": {"enabled": False, "provider": "mock"},
         "metrics": {"output": "./results"},
     }
@@ -63,7 +68,8 @@ class TestHappyPath:
         config = load_config(REPO_ROOT / "configs" / "local_chroma.yaml")
         assert config.chunking.strategy == "publisher_offsets"
         assert config.embedding.provider == "precomputed"
-        assert config.retrieval.mode == "sequential"
+        assert config.vector_store.partitions is None
+        assert layout_mode(config) == "sequential"
         assert config.generation.enabled is False
 
     def test_dataset_version_optional_for_reproducibility(self, tmp_path):
@@ -291,74 +297,135 @@ class TestChunkingShapes:
             load(tmp_path, data)
 
 
-class TestRetrievalShapes:
-    def test_unknown_mode(self, tmp_path):
-        data = base()
-        data["retrieval"]["mode"] = "parallel"
-        with pytest.raises(ConfigError, match="retrieval.mode"):
-            load(tmp_path, data)
-
-    def test_sequential_forbids_multiple_partitions(self, tmp_path):
-        data = base()
-        data["retrieval"]["partitions"] = 4
-        with pytest.raises(ConfigError, match="sequential"):
-            load(tmp_path, data)
-
-    def test_sequential_forbids_multiple_workers(self, tmp_path):
-        data = base()
-        data["retrieval"]["workers"] = 4
-        with pytest.raises(ConfigError, match="sequential"):
-            load(tmp_path, data)
-
-    @pytest.mark.parametrize("key", ["partitions", "workers"])
-    def test_partitions_and_workers_must_be_at_least_one(self, tmp_path, key):
-        data = base()
-        data["retrieval"]["mode"] = "collective"
-        data["retrieval"][key] = 0
-        with pytest.raises(ConfigError, match=f"retrieval.{key}"):
-            load(tmp_path, data)
-
+class TestEmbeddingShapes:
     def test_batch_size_must_be_positive(self, tmp_path):
         data = base()
         data["embedding"]["batch_size"] = 0
         with pytest.raises(ConfigError, match="embedding.batch_size"):
             load(tmp_path, data)
 
-    def test_executor_defaults_to_threads_and_validates(self, tmp_path):
-        data = base()
-        data["retrieval"] = {"mode": "collective", "partitions": 2, "workers": 2}
-        assert load(tmp_path, data).retrieval.executor == "threads"
 
+class TestIndexLayoutAndExecution:
+    """ADR-014: the partition layout belongs to the index section, the
+    execution settings to the query section, and the mode is derived."""
+
+    def test_absent_partitions_is_the_monolithic_layout(self, tmp_path):
+        config = load(tmp_path, base())
+        assert config.vector_store.partitions is None
+        assert layout_mode(config) == "sequential"
+        assert resolved_execution(config) == (None, None)
+
+    def test_one_partition_is_the_partitioned_layout(self, tmp_path):
+        # P=1 is not the monolith: it takes the partitioned code path, so
+        # a scaling curve's first point runs the same code as the rest
+        data = base()
+        data["vector_store"]["partitions"] = 1
+        config = load(tmp_path, data)
+        assert config.vector_store.partitions == 1
+        assert layout_mode(config) == "collective"
+
+    def test_partitions_must_be_at_least_one_and_an_int(self, tmp_path):
+        data = base()
+        for bad in (0, -2, True, "4"):
+            data["vector_store"]["partitions"] = bad
+            with pytest.raises(ConfigError, match="vector_store.partitions"):
+                load(tmp_path, data)
+
+    def test_partitions_under_retrieval_names_its_new_home(self, tmp_path):
+        data = base()
+        data["retrieval"]["partitions"] = 4
+        with pytest.raises(ConfigError, match="declare vector_store.partitions: 4"):
+            load(tmp_path, data)
+        # the old sequential shape spelled its defaults; one partition
+        # under the old schema was the monolith, not the P=1 layout
+        data["retrieval"]["partitions"] = 1
+        with pytest.raises(ConfigError, match="delete the key, a monolithic"):
+            load(tmp_path, data)
+
+    def test_workers_are_free_of_the_partition_count(self, tmp_path):
+        data = base()
+        data["vector_store"]["partitions"] = 8
+        data["retrieval"] = {"k": 10, "workers": 3}
+        config = load(tmp_path, data)
+        assert config.retrieval.workers == 3
+        assert resolved_execution(config) == ("threads", 3)
+
+    def test_absent_execution_keys_resolve_to_threads_and_one(self, tmp_path):
+        data = base()
+        data["vector_store"]["partitions"] = 2
+        config = load(tmp_path, data)
+        assert config.retrieval.executor is None and config.retrieval.workers is None
+        assert resolved_execution(config) == ("threads", 1)
+
+    def test_serial_executor_searches_the_same_index_one_partition_at_a_time(self, tmp_path):
+        data = base()
+        data["vector_store"]["partitions"] = 8
+        data["retrieval"] = {"k": 10, "executor": "serial"}
+        assert resolved_execution(load(tmp_path, data)) == ("serial", 1)
+        data["retrieval"]["workers"] = 1
+        assert resolved_execution(load(tmp_path, data)) == ("serial", 1)
+        data["retrieval"]["workers"] = 4
+        with pytest.raises(ConfigError, match="retrieval.workers"):
+            load(tmp_path, data)  # a knob the serial executor would ignore
+
+    def test_unknown_executor(self, tmp_path):
+        data = base()
+        data["vector_store"]["partitions"] = 2
         data["retrieval"]["executor"] = "lithops"
         with pytest.raises(ConfigError, match="retrieval.executor"):
             load(tmp_path, data)
 
-        data["retrieval"]["executor"] = "serial"
-        with pytest.raises(ConfigError, match="retrieval.workers"):
-            load(tmp_path, data)  # serial admits one worker only
-        data["retrieval"]["workers"] = 1
-        assert load(tmp_path, data).retrieval.executor == "serial"
-
-    def test_executor_is_rejected_in_sequential_mode(self, tmp_path):
+    def test_workers_must_be_at_least_one(self, tmp_path):
         data = base()
-        data["retrieval"]["executor"] = "threads"
-        with pytest.raises(ConfigError, match="retrieval.executor"):
+        data["vector_store"]["partitions"] = 2
+        data["retrieval"]["workers"] = 0
+        with pytest.raises(ConfigError, match="retrieval.workers"):
             load(tmp_path, data)
 
-    def test_shipped_collective_configs_parse(self):
+    @pytest.mark.parametrize("key,value", [("workers", 2), ("executor", "threads")])
+    def test_execution_keys_need_a_partitioned_index(self, tmp_path, key, value):
+        data = base()
+        data["retrieval"][key] = value
+        with pytest.raises(ConfigError, match=f"retrieval.{key}.*partitioned index"):
+            load(tmp_path, data)
+
+    def test_legacy_mode_key_is_accepted_when_it_agrees_and_refused_otherwise(self, tmp_path):
+        # configurations written for the previous schema (the ones the
+        # written report reproduces) keep loading while they tell the truth
+        data = base()
+        data["retrieval"]["mode"] = "sequential"
+        assert layout_mode(load(tmp_path, data)) == "sequential"
+        data["retrieval"]["mode"] = "collective"
+        with pytest.raises(ConfigError, match="retrieval.mode: 'collective' contradicts"):
+            load(tmp_path, data)
+        data["vector_store"]["partitions"] = 2
+        assert layout_mode(load(tmp_path, data)) == "collective"
+        data["retrieval"]["mode"] = "sequential"
+        with pytest.raises(ConfigError, match="retrieval.mode"):
+            load(tmp_path, data)
+        data["retrieval"]["mode"] = "parallel"
+        with pytest.raises(ConfigError, match="retrieval.mode: unknown mode"):
+            load(tmp_path, data)
+
+    def test_shipped_collective_configs_declare_the_layout(self):
         for partitions in (1, 2, 4, 8):
             config = load_config(f"configs/collective_{partitions}.yaml")
-            assert config.retrieval.mode == "collective"
-            assert config.retrieval.partitions == partitions
-            assert config.retrieval.workers == partitions
+            assert layout_mode(config) == "collective"
+            assert config.vector_store.partitions == partitions
             assert config.vector_store.path.endswith(f"-p{partitions}")
+            # as many threads as partitions is the partition-scaling
+            # experiment's choice for these files, not a rule
+            assert resolved_execution(config) == ("threads", partitions)
 
-    def test_collective_allows_partitions_and_workers(self, tmp_path):
-        data = base()
-        data["retrieval"] = {"mode": "collective", "k": 10, "partitions": 4, "workers": 2}
-        config = load(tmp_path, data)
-        assert config.retrieval.partitions == 4
-        assert config.retrieval.workers == 2
+    def test_shipped_serial_config_shares_the_eight_partition_index(self):
+        threads = load_config("configs/collective_8.yaml")
+        serial = load_config("configs/collective_8_serial.yaml")
+        assert serial.vector_store == threads.vector_store
+        assert resolved_execution(serial) == ("serial", 1)
+
+    def test_every_shipped_config_parses(self):
+        for path in sorted((REPO_ROOT / "configs").glob("*.yaml")):
+            load_config(path)
 
     def test_k_must_be_positive(self, tmp_path):
         data = base()

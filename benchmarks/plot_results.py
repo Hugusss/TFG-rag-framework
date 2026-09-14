@@ -218,9 +218,15 @@ def plot_latency_vs_partitions(results: Path, output: Path) -> Path:
     rows = payload["rows"]
     sequential = [r for r in rows if r["mode"] == "sequential"]
     collective = [r for r in rows if r["mode"] == "collective"]
+    # the worker count is recorded per row and is not tied to P; the
+    # label says what the campaign actually chose
+    if all(r["workers"] == r["partitions"] for r in collective):
+        workers_note = "workers = P"
+    else:
+        workers_note = "workers " + "/".join(str(r["workers"]) for r in collective)
     fig, axis = plt.subplots(figsize=(7, 4.5))
     for key, label, style in (
-        ("search_seconds", "fan-out wall time (collective, workers = P)", COLLECTIVE),
+        ("search_seconds", f"fan-out wall time (collective, {workers_note})", COLLECTIVE),
         ("worker_max_seconds", "slowest worker (collective)", {**COLLECTIVE, "marker": "^", "linestyle": ":"}),
     ):
         medians, lows, highs = [], [], []
@@ -234,7 +240,7 @@ def plot_latency_vs_partitions(results: Path, output: Path) -> Path:
         axis.axhspan(summary["min"] * 1000, summary["p95"] * 1000, color=SEQUENTIAL["color"], alpha=0.12, label="sequential min..p95")
     axis.set_xscale("log", base=2)
     axis.set_xticks([r["partitions"] for r in collective], [str(r["partitions"]) for r in collective])
-    axis.set_xlabel("partitions P (workers = P)")
+    axis.set_xlabel(f"partitions P ({workers_note})")
     axis.set_ylabel("search latency (ms; median, bars = min..p95)")
     axis.legend(fontsize=8)
     return finish(fig, axis, f"Retrieval latency vs number of partitions (k={payload['k']})", stamp(payload, path), output, "04-latency-vs-partitions.png")

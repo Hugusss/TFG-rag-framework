@@ -177,18 +177,22 @@ measured ratio is 2.33 subwords per word.
 |---|---|---|---|---|
 | `type` | str | | yes | `chroma` is the only registered name; the set is open by design. |
 | `path` | str | | yes | Persistent client directory. Also what `index_size_bytes` measures. |
-| `collection` | str | | yes | Base name. In collective mode the physical names are `<collection>-p{i:02d}of{P:02d}`. |
+| `collection` | str | | yes | Base name. On a partitioned index the physical names are `<collection>-p{i:02d}of{P:02d}`. |
 | `ef_search` | int | | no | HNSW search width, at least 1. Unset means the backend default, which is 100 in the pinned version. Raise it as the corpus grows. |
+| `partitions` | int | | no | The index layout, at least 1. Absent means one monolithic collection, searched by the sequential retriever. `1` or more means one collection per partition, searched partition by partition and merged (the collective path). `1` is not the monolith: it runs the partitioned code, so the first point of a scaling curve is comparable with the others. Decided at ingest and sealed on disk; a query configuration must declare the same value (ADR-014). |
 
 ### `retrieval`
 
+Everything here describes how a query runs, nothing about the index.
+
 | Key | Type | Default | Required | Notes |
 |---|---|---|---|---|
-| `mode` | str | | yes | `sequential` or `collective`. |
 | `k` | int | `10` | no | Positive. |
-| `partitions` | int | `1` | no | Must be 1 when the mode is sequential. |
-| `workers` | int | `1` | no | Must be 1 when the mode is sequential, and 1 when the executor is serial. |
-| `executor` | str | `threads` | no | `serial` or `threads`. The key must be absent in sequential mode, even spelled with its default value. |
+| `executor` | str | `threads` | no | `serial` or `threads`. Only meaningful on a partitioned index (`vector_store.partitions` set). `serial` searches the partitions one after another on the calling thread. |
+| `workers` | int | `1` | no | Threads searching partitions at the same time, at least 1. Only meaningful on a partitioned index, and unrelated to the partition count: eight partitions may be searched by one, three or eight workers. Must be absent or 1 with `serial`. |
+| `mode` | str | | no | Legacy. The mode is derived from the layout: `collective` when `partitions` is set, `sequential` otherwise. The key is accepted when it agrees with the derived value and refused when it contradicts it. New files leave it out. |
+
+A `partitions` key under `retrieval` is refused with a message naming its new home.
 
 ### `generation`
 
@@ -229,7 +233,6 @@ vector_store:
   path: ./state/chroma-recursive500
   collection: owi-spa0728-rec500-jinav5small-v1
 retrieval:
-  mode: sequential
   k: 10
 metrics:
   output: ./results
@@ -246,10 +249,12 @@ tells you how far the run got.
 **On load, before touching disk or models.** `publisher_offsets` with
 any chunk size, because the sizes come from the corpus; `recursive`
 missing any of its three sizes; an overlap not smaller than the target,
-or a minimum larger than it; `sequential` with more than one partition
-or worker; `sequential` with an `executor` key at all; `serial` with
-more than one worker; generation keys such as `model` or `endpoint`
-with a provider other than `ollama`; and `ollama` without a model.
+or a minimum larger than it; `workers` or `executor` without
+`vector_store.partitions` (nothing to fan out on a monolithic index);
+`serial` with more than one worker; a `retrieval.partitions` key (it
+moved to `vector_store`); a legacy `retrieval.mode` that contradicts the
+layout; generation keys such as `model` or `endpoint` with a provider
+other than `ollama`; and `ollama` without a model.
 
 **On construction, before any work.** The important one is `recursive`
 chunking with `precomputed` embeddings: official vectors exist only for
@@ -280,7 +285,8 @@ refusal sentence.
 | File | What it shows |
 |---|---|
 | `local_chroma.yaml` | The baseline: sequential, publisher chunks, official vectors. Ingests in seconds. |
-| `collective_1/2/4/8.yaml` | Collective mode as a configuration change. `collective_1` exists so that the first point of a scaling curve runs the same code as P=8. |
+| `collective_1/2/4/8.yaml` | A partitioned index as a configuration change (`vector_store.partitions`), each searched by as many threads as partitions. `collective_1` exists so that the first point of a scaling curve runs the same code as P=8. |
+| `collective_8_serial.yaml` | The eight-partition index of `collective_8.yaml`, byte-identical `vector_store` section, searched one partition after another by the serial executor: same index, different concurrency. |
 | `spa_growth.yaml` | A ten-times larger Spanish corpus, and the only place `ef_search: 800` is demonstrated with its reason. |
 | `fullday_0728.yaml` | Full scale, 75 languages, backend default width. |
 | `fullday_0728_ef800.yaml` | The same index at width 800. It shares path and collection with the previous one on purpose: two widths over one index, not two indexes. |

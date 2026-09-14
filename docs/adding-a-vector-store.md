@@ -41,11 +41,11 @@ escape raw.
 
 In `orchestration/pipeline.py::build_vector_store`, add a branch on
 `config.vector_store.type` that constructs your store with the
-provider's identity metadata, mirroring the Chroma branch. Collective
-mode wraps whatever the branch returns in `PartitionedVectorStore`
-automatically, so your backend gets partitioned layouts for free —
-provided it accepts the collection names `<name>-p{i:02d}of{P:02d}` and
-the two extra metadata keys.
+provider's identity metadata, mirroring the Chroma branch. When
+`vector_store.partitions` is set, `build_vector_store` wraps the branch's
+factory in `PartitionedVectorStore` automatically, so your backend gets
+partitioned layouts for free — provided it accepts the collection names
+`<name>-p{i:02d}of{P:02d}` and the two extra metadata keys.
 
 `vector_store.type` is an open set: no change to `config.py` is needed.
 The factory's error message lists known types; add yours.

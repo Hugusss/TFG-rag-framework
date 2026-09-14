@@ -50,11 +50,14 @@ every shipped configuration) carrying the effective
 configuration, git commit, machine, dependency versions, and dataset
 version, so any result can be reproduced.
 
-### Collective mode
+### Collective retrieval
 
 The same corpus can be ingested into P partitions — one collection per
-partition, documents assigned by a stable hash — and searched by P
-workers with a global top-k merge. It is a config change only:
+partition, documents assigned by a stable hash — and searched partition
+by partition by a configurable number of workers with a global top-k
+merge. The partition count is a property of the index
+(`vector_store.partitions`); the worker count is a property of the query
+(`retrieval.workers`), independent of it. Both are config changes only:
 
 ```bash
 .venv/bin/python -m rag_framework ingest --config configs/collective_4.yaml
@@ -62,9 +65,12 @@ workers with a global top-k merge. It is a config change only:
   --question "monumentos de la Alhambra de Granada" --retrieval-only --k 5
 ```
 
-Results carry `partition_id` / `worker_id` provenance and per-partition
-timings. This is a *local simulation* of collective retrieval (threads
-over local collections), measured, not a distributed system.
+`configs/collective_8_serial.yaml` searches the eight-partition index
+of `collective_8.yaml` one partition at a time: same index, different
+concurrency. Results carry `partition_id` / `worker_id` provenance and
+per-partition timings. This is a *local simulation* of collective
+retrieval (threads over local collections), measured, not a distributed
+system.
 
 ### Experiments and figures
 
@@ -98,7 +104,7 @@ draws. Commands, measurement policy and caveats:
 - `docs/limitations.md` — measured limits of scope, performance, data
   and evaluation.
 - `docs/dataset.md` — the corpus, its quirks and how to obtain it.
-- `docs/decisions/` — the thirteen architecture decision records, with
+- `docs/decisions/` — the fourteen architecture decision records, with
   an index in `docs/decisions/README.md`.
 
 ## Layout
@@ -108,9 +114,10 @@ draws. Commands, measurement policy and caveats:
   `retrieval/`, `executors/`, `generation/`, `orchestration/`,
   `metrics/`. Each component sits behind a small interface; backends
   are selected in `configs/*.yaml`.
-- `configs/` — ten pipeline configurations: the sequential baseline,
-  collective layouts for 1, 2, 4 and 8 partitions, two larger corpora,
-  two search widths at full scale and one with real generation. What
+- `configs/` — eleven pipeline configurations: the sequential baseline,
+  partitioned layouts for 1, 2, 4 and 8 partitions (the last one also
+  searched in series), two larger corpora, two search widths at full
+  scale and one with real generation. What
   each one demonstrates: `docs/usage.md`. `benchmarks/` — experiment
   and plot scripts. `evaluation/` — the evaluation query set.
   `results/` — committed raw run reports. `figures/` — regenerated

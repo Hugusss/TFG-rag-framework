@@ -25,7 +25,7 @@ def test_manifest_carries_rule9_fields(tmp_path):
                 "chunking": {"strategy": "publisher_offsets"},
                 "embedding": {"provider": "precomputed", "model": "m"},
                 "vector_store": {"type": "chroma", "path": "s", "collection": "c"},
-                "retrieval": {"mode": "sequential"},
+                "retrieval": {},
                 "metrics": {"output": "r"},
             }
         ),

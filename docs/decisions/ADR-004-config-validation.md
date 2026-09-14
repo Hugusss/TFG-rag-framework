@@ -2,6 +2,11 @@
 
 Increment: config
 
+Partially superseded by ADR-014: `retrieval.mode` is no longer declared
+but derived from `vector_store.partitions`, so the value-dependent shape
+mentioned below is now whether that key is present. Everything else
+here still holds.
+
 ## Problem
 
 Every experimental parameter lives in a configuration file, so that a run
@@ -22,7 +27,7 @@ contradictory values).
 Option 1: `config.py` with one small frozen dataclass per section, a
 single `load_config(path)` entry point, unknown keys/sections rejected,
 no type coercion, value-dependent shape checks (chunking strategy,
-retrieval mode).
+index layout — originally the retrieval mode, see ADR-014).
 
 ## Reason
 
@@ -65,5 +70,6 @@ retrieval mode).
   it introduces a new shape.
 - Closed sets are validated here only where the *shape* depends on the
   value: `chunking.strategy` (each strategy has different required keys)
-  and `retrieval.mode` (topology). Component names stay free-form strings
-  resolved later.
+  and the index layout (`vector_store.partitions` present or absent
+  decides which `retrieval` keys are allowed; ADR-014). Component names
+  stay free-form strings resolved later.

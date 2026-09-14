@@ -119,9 +119,14 @@ Each partial list carries its `partition_id`, and the retriever stamps
 the `worker_id` that produced it, so every hit in the merged result can
 be traced back to where it was found.
 
-Both modes are selected by `retrieval.mode`; `RAGPipeline.query()` is
-the same code for both and reports the same metric keys (collective-only
-stages are `null` in sequential mode).
+Which path runs follows the index, not a declared mode: an index built
+with `vector_store.partitions` is a `PartitionedVectorStore` and gets the
+collective path; a monolithic collection gets the sequential one. How
+many workers search a partitioned index is a query-time choice
+(`retrieval.executor`, `retrieval.workers`), unrelated to the partition
+count (ADR-014). `RAGPipeline.query()` is the same code for both and
+reports the same metric keys (collective-only stages are `null` on a
+monolithic index).
 
 ## 4. Determinism
 
@@ -148,12 +153,13 @@ Three layers, each failing before any work runs:
 1. **Configuration** (`config.py`): structure and topology — every key
    with the right type, unknown and duplicate keys rejected, no
    coercion, value-dependent shapes (`publisher_offsets` admits no token
-   sizes; `sequential` admits one partition and one worker; a serial
-   executor admits one worker).
+   sizes; `workers` and `executor` need a partitioned index; a serial
+   executor admits one worker; a legacy `retrieval.mode` must agree
+   with the layout).
 2. **Factories** (`orchestration/pipeline.py`): whether a component
    name is registered, and cross-seam coherence (`recursive` chunking
-   cannot use `precomputed` vectors; `collective` requires the
-   partitioned store).
+   cannot use `precomputed` vectors; a partitioned store must be opened
+   by a configuration that declares its layout).
 3. **Components at run time**: filesystem facts, backend state
    (an existing collection with a different embedding identity is
    refused; querying an empty collection is refused).

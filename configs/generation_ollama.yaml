@@ -23,7 +23,6 @@ vector_store:
   collection: owi-spa0728-publisherchunks-jinav5small-v1
 
 retrieval:
-  mode: sequential
   k: 10
 
 generation:

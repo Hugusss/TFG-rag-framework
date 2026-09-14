@@ -112,7 +112,13 @@ Every result file records what was measured and how:
   query-encoder identity.
 - `chunkexp-*.json`, `scaling-*.json`, `correctness-*.json`: one file
   per experiment run; `rows` / `layouts` hold per-configuration blocks;
-  per-query detail is kept so any aggregate can be recomputed.
+  per-query detail is kept so any aggregate can be recomputed. Rows and
+  query manifests carry `mode`, `partitions`, `workers` and `executor`.
+  Since ADR-014 the mode is derived from the index layout and the
+  execution settings are the resolved ones: a monolithic index carries
+  `partitions`, `workers` and `executor` as `null`. Files committed
+  before that carry `1`, `1` and `threads` there, which were schema
+  defaults, not measured settings.
 - `quality-*.json`: one file per corpus and search width, with the
   measured quality beside the exact brute-force reference
   (`exact_mean_recall_at_k`), an `exactness` block holding the mean

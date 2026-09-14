@@ -34,7 +34,7 @@ def config(**overrides) -> PipelineConfig:
         "vector_store": VectorStoreConfig(
             type="chroma", path="./state/chroma", collection="col"
         ),
-        "retrieval": RetrievalConfig(mode="sequential"),
+        "retrieval": RetrievalConfig(),
         "generation": GenerationConfig(),
         "metrics": MetricsConfig(output="./results"),
     }
@@ -158,7 +158,7 @@ class TestFactories:
         with pytest.raises(ConfigError, match="known: chroma"):
             build_vector_store(cfg, FAKE_PROVIDER)
 
-    def test_sequential_mode_builds_sequential_retriever(self, tmp_path):
+    def test_monolithic_store_gets_the_sequential_retriever(self, tmp_path):
         from types import SimpleNamespace
 
         from rag_framework.orchestration.pipeline import build_retriever
@@ -168,16 +168,18 @@ class TestFactories:
         retriever = build_retriever(cfg, FAKE_PROVIDER, SimpleNamespace())
         assert isinstance(retriever, SequentialRetriever)
 
-    def test_collective_mode_builds_collective_retriever(self, tmp_path):
+    def test_partitioned_store_gets_the_collective_retriever(self, tmp_path):
+        # the retriever follows the store; the worker count is a query
+        # choice unrelated to the partition count (4 partitions, 3 threads)
         from rag_framework.executors.local import SerialExecutor, ThreadExecutor
         from rag_framework.orchestration.pipeline import build_retriever
         from rag_framework.retrieval.collective import CollectiveRetriever
 
         cfg = config(
             vector_store=VectorStoreConfig(
-                type="chroma", path=str(tmp_path), collection="col"
+                type="chroma", path=str(tmp_path), collection="col", partitions=4
             ),
-            retrieval=RetrievalConfig(mode="collective", partitions=4, workers=3),
+            retrieval=RetrievalConfig(workers=3),
         )
         store = build_vector_store(cfg, FAKE_PROVIDER)
         retriever = build_retriever(cfg, FAKE_PROVIDER, store)
@@ -185,25 +187,25 @@ class TestFactories:
         assert isinstance(retriever._executor, ThreadExecutor)
         assert retriever._executor.workers == 3
 
+        # absent keys resolve to threads and one worker
+        plain = config(vector_store=cfg.vector_store)
+        retriever = build_retriever(plain, FAKE_PROVIDER, store)
+        assert isinstance(retriever._executor, ThreadExecutor)
+        assert retriever._executor.workers == 1
+
+        # the same partitioned index, searched one partition after another
         serial = config(
             vector_store=cfg.vector_store,
-            retrieval=RetrievalConfig(
-                mode="collective", partitions=2, workers=1, executor="serial"
-            ),
+            retrieval=RetrievalConfig(executor="serial"),
         )
-        retriever = build_retriever(serial, FAKE_PROVIDER, build_vector_store(serial, FAKE_PROVIDER))
+        retriever = build_retriever(serial, FAKE_PROVIDER, store)
+        assert isinstance(retriever, CollectiveRetriever)
         assert isinstance(retriever._executor, SerialExecutor)
 
-    def test_collective_mode_refuses_a_plain_store(self):
-        from types import SimpleNamespace
-
-        from rag_framework.orchestration.pipeline import build_retriever
-
-        cfg = config(
-            retrieval=RetrievalConfig(mode="collective", partitions=4, workers=4)
-        )
-        with pytest.raises(ConfigError, match="partitioned store"):
-            build_retriever(cfg, FAKE_PROVIDER, SimpleNamespace())
+        # a partitioned store handed to a configuration that declares no
+        # layout is refused by name, not with an "unknown executor"
+        with pytest.raises(ConfigError, match="vector_store.partitions: absent"):
+            build_retriever(config(), FAKE_PROVIDER, store)
 
     def test_mock_generator_builds(self):
         from rag_framework.generation.mock import MockGenerator
@@ -231,18 +233,26 @@ class TestFactories:
         with pytest.raises(ConfigError, match="known: mock"):
             build_generator(cfg)
 
-    def test_collective_mode_builds_partitioned_store(self, tmp_path):
+    def test_partitions_in_the_index_section_build_a_partitioned_store(self, tmp_path):
         from rag_framework.vectorstores.partitioned import PartitionedVectorStore
 
         cfg = config(
             vector_store=VectorStoreConfig(
-                type="chroma", path=str(tmp_path), collection="col"
+                type="chroma", path=str(tmp_path), collection="col", partitions=4
             ),
-            retrieval=RetrievalConfig(mode="collective", partitions=4, workers=2),
+            retrieval=RetrievalConfig(workers=2),
         )
         store = build_vector_store(cfg, FAKE_PROVIDER)
         assert isinstance(store, PartitionedVectorStore)
         assert store.partitions == 4
+
+        # one partition is still the partitioned layout, not the monolith
+        one = config(
+            vector_store=VectorStoreConfig(
+                type="chroma", path=str(tmp_path / "one"), collection="col", partitions=1
+            )
+        )
+        assert isinstance(build_vector_store(one, FAKE_PROVIDER), PartitionedVectorStore)
         inner = store._stores[3]
         assert isinstance(inner, ChromaVectorStore)
         assert inner._metadata["model_id"] == "m"

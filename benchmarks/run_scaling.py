@@ -1,8 +1,10 @@
 """Partition- and worker-scaling experiments.
 
-Partition scaling: the collective layouts P = 1, 2, 4, 8 (workers = P)
-against the sequential baseline, same corpus. Worker scaling: one layout
-searched by the serial executor and by 1, 2, 4, 8 threads. Both record
+Partition scaling: the partitioned layouts P = 1, 2, 4, 8 against the
+sequential baseline, same corpus; the shipped layouts search each with
+as many threads as partitions, a choice recorded per row. Worker
+scaling: one layout searched by the serial executor and by 1, 2, 4, 8
+threads. Both record
 total latency, query-embedding time, fan-out wall time, merge time,
 maximum and mean worker time, candidates returned, partition-size and
 worker-time imbalance, and index size — after a stated warm-up and for a
@@ -25,7 +27,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from rag_framework.config import PipelineConfig, load_config
+from rag_framework.config import (
+    PipelineConfig,
+    layout_mode,
+    load_config,
+    resolved_execution,
+)
 from rag_framework.metrics.manifest import run_manifest, write_report
 from rag_framework.metrics.quality import imbalance, summarize
 from rag_framework.orchestration.pipeline import RAGPipeline, build_retriever
@@ -77,11 +84,15 @@ def measure(retriever, queries: list[str], k: int, warm_up: int, repetitions: in
 
 
 def describe(config: PipelineConfig, store) -> dict:
+    # rows keep the mode/partitions/workers/executor vocabulary of the
+    # published result files: mode derived from the layout, execution
+    # settings resolved (None on a monolithic index, where nothing fans out)
+    executor, workers = resolved_execution(config)
     info = {
-        "mode": config.retrieval.mode,
-        "partitions": config.retrieval.partitions,
-        "workers": config.retrieval.workers,
-        "executor": config.retrieval.executor if config.retrieval.mode == "collective" else None,
+        "mode": layout_mode(config),
+        "partitions": config.vector_store.partitions,
+        "workers": workers,
+        "executor": executor,
         "vectors": store.count(),
         "index_size_bytes": directory_size(config.vector_store.path),
     }
@@ -94,6 +105,11 @@ def describe(config: PipelineConfig, store) -> dict:
 
 def open_layout(path: str, encoder):
     config = load_config(path)
+    if config.vector_store.partitions is None:
+        raise SystemExit(
+            f"{path}: vector_store.partitions is absent — a layout for this"
+            " experiment must be a partitioned index"
+        )
     pipeline = RAGPipeline(config)
     pipeline.vector_store.create_or_open(config.vector_store.collection)
     if pipeline.vector_store.count() == 0:
@@ -115,13 +131,13 @@ def run_partition_scaling(base: RAGPipeline, queries, args) -> list[dict]:
     for path in args.layouts:
         config, pipeline = open_layout(path, base.embedding_provider)
         retriever = build_retriever(config, base.embedding_provider, pipeline.vector_store)
-        row = {"label": f"P={config.retrieval.partitions}", "config": path, **describe(config, pipeline.vector_store)}
+        row = {"label": f"P={config.vector_store.partitions}", "config": path, **describe(config, pipeline.vector_store)}
         row["timings"] = measure(retriever, queries, args.k, args.warm_up, args.repetitions)
         retriever._executor.close()
         t = row["timings"]
         _logger.info(
             "%s (%s x%d): search median %.2f ms, worker max %.2f / mean %.2f ms, merge %.3f ms",
-            row["label"], config.retrieval.executor, config.retrieval.workers,
+            row["label"], row["executor"], row["workers"],
             1000 * t["search_seconds"]["median"], 1000 * t["worker_max_seconds"]["median"],
             1000 * t["worker_mean_seconds"]["median"], 1000 * t["merge_seconds"]["median"],
         )

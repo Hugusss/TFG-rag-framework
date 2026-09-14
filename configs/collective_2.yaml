@@ -1,8 +1,9 @@
-# Collective retrieval over 2 partitions: the same official OWI chunks
-# and precomputed vectors as local_chroma.yaml, ingested into one Chroma
-# collection per partition (named <collection>-pNNof02) and searched by
-# 2 threads with a global top-k merge. A local simulation of collective
-# retrieval, not a distributed system.
+# A two-partition index: the same official OWI chunks and precomputed
+# vectors as local_chroma.yaml, ingested into one Chroma collection per
+# partition (named <collection>-pNNof02). The partition count is a
+# property of the index; the thread count is a property of the query
+# (here 2, to match the partition-scaling experiment). A local
+# simulation of collective retrieval, not a distributed system.
 #
 # Each partition count gets its own store directory so index sizes
 # are measured per layout; the baseline collection lives in ./state/chroma.
@@ -24,13 +25,12 @@ vector_store:
   type: chroma
   path: ./state/chroma-collective-p2
   collection: owi-spa0728-publisherchunks-jinav5small-v1
+  partitions: 2
 
 retrieval:
-  mode: collective
   k: 10
-  partitions: 2
-  workers: 2
   executor: threads
+  workers: 2
 
 generation:
   enabled: false

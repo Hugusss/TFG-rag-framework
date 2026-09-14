@@ -23,7 +23,12 @@ from rag_framework import __version__
 from rag_framework.chunking.base import Chunker
 from rag_framework.chunking.publisher_offsets import PublisherOffsetsChunker
 from rag_framework.chunking.recursive import RecursiveChunker
-from rag_framework.config import ConfigError, PipelineConfig, load_config
+from rag_framework.config import (
+    ConfigError,
+    PipelineConfig,
+    load_config,
+    resolved_execution,
+)
 from rag_framework.embeddings.base import EmbeddingProvider
 from rag_framework.embeddings.local import LocalEmbeddingProvider
 from rag_framework.embeddings.precomputed import PrecomputedEmbeddingProvider
@@ -128,14 +133,12 @@ def build_vector_store(
                 ef_search=config.vector_store.ef_search,
             )
 
-        if config.retrieval.mode == "collective":
-            # the partition layout is an ingest-time property of the
-            # index, so it is decided here, where the store is built.
-            # P=1 still goes through the partitioned path: a scaling
-            # curve whose first point runs different code measures the
-            # code change, not the partition count.
+        if config.vector_store.partitions is not None:
+            # the layout is an ingest-time property of the index, so it
+            # is decided here, where the store is built, from the index
+            # section; P=1 keeps the partitioned path (VectorStoreConfig)
             return PartitionedVectorStore(
-                chroma_store, config.retrieval.partitions
+                chroma_store, config.vector_store.partitions
             )
         return chroma_store()
     raise ConfigError(
@@ -164,29 +167,30 @@ def build_retriever(
     provider: EmbeddingProvider,
     store: VectorStore,
 ) -> Retriever:
-    if config.retrieval.mode == "sequential":
-        return SequentialRetriever(provider, store)
-    if config.retrieval.mode == "collective":
-        if not isinstance(store, PartitionedVectorStore):
-            # wiring invariant, not a user error: the store factory
-            # must have built the partitioned layout for this mode
-            raise ConfigError(
-                "retrieval.mode: collective requires a partitioned store"
-            )
+    # the retriever follows the store, not a declared mode: a partitioned
+    # index is searched partition by partition and merged; any other
+    # store is one search over one collection, the reference path
+    if isinstance(store, PartitionedVectorStore):
         return CollectiveRetriever(provider, store, build_executor(config))
-    raise ConfigError(
-        f"retrieval.mode: unknown mode '{config.retrieval.mode}'"
-        " (known: sequential, collective)"
-    )
+    return SequentialRetriever(provider, store)
 
 
 def build_executor(config: PipelineConfig) -> Executor:
-    if config.retrieval.executor == "serial":
+    executor, workers = resolved_execution(config)
+    if executor is None:
+        # a partitioned store opened by a configuration that does not
+        # declare its layout: the configuration is what says how many
+        # partitions to open, so it must say so
+        raise ConfigError(
+            "vector_store.partitions: absent, so there is nothing to fan"
+            " out; a partitioned index must declare its layout"
+        )
+    if executor == "serial":
         return SerialExecutor()
-    if config.retrieval.executor == "threads":
-        return ThreadExecutor(config.retrieval.workers)
+    if executor == "threads":
+        return ThreadExecutor(workers)
     raise ConfigError(
-        f"retrieval.executor: unknown executor '{config.retrieval.executor}'"
+        f"retrieval.executor: unknown executor '{executor}'"
         " (known: serial, threads)"
     )
 

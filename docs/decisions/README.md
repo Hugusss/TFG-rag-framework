@@ -20,8 +20,11 @@ visible.
 | [ADR-011](ADR-011-deterministic-corpus-sampling.md) | Deterministic, nested corpus sampling for dataset-size scaling |
 | [ADR-012](ADR-012-matplotlib-for-plots.md) | matplotlib as an optional extra for the required plots |
 | [ADR-013](ADR-013-ollama-generation.md) | Real generation through Ollama; model choice |
+| [ADR-014](ADR-014-partition-layout-belongs-to-the-index.md) | The partition layout belongs to the index; workers belong to the query |
 
 ADR-007 is reserved rather than implemented: it scopes a second vector
 store that the project deferred and lists as future work. ADR-010 and
 ADR-013 are read together, the first for why generation shipped mocked
-and the second for the real model added beside it.
+and the second for the real model added beside it. ADR-014 partially
+supersedes ADR-004 and ADR-006's wording: `retrieval.mode` is derived
+from `vector_store.partitions`.

@@ -74,19 +74,32 @@ class EmbeddingConfig:
 
 @dataclass(frozen=True, slots=True)
 class VectorStoreConfig:
+    """``partitions`` describes the index, never the query: absent means
+    one monolithic collection; ``1`` or more means the partitioned layout,
+    one collection per partition named ``<collection>-pNNofPP``. ``1``
+    still takes the partitioned code path, so a scaling curve starts on
+    the same code as its other points. The layout is decided at ingest,
+    sealed on disk, and declared again by every configuration that opens
+    the index (ADR-014)."""
+
     type: str
     path: str
     collection: str
     ef_search: int | None = None
+    partitions: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class RetrievalConfig:
-    mode: str
+    """How a query runs; nothing here describes the index. ``executor``
+    and ``workers`` stay ``None`` when their keys are absent, so "not
+    stated" is distinguishable from "stated as the default". They are
+    meaningful only on a partitioned index, where
+    :func:`resolved_execution` fills absence with ``threads`` and ``1``."""
+
     k: int = 10
-    partitions: int = 1
-    workers: int = 1
-    executor: str = "threads"
+    executor: str | None = None
+    workers: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -240,58 +253,121 @@ def _parse_embedding(section: dict) -> EmbeddingConfig:
 
 
 def _parse_vector_store(section: dict) -> VectorStoreConfig:
-    _forbid_unknown(section, {"type", "path", "collection", "ef_search"}, "vector_store")
+    _forbid_unknown(
+        section,
+        {"type", "path", "collection", "ef_search", "partitions"},
+        "vector_store",
+    )
     ef_search = _take(section, "ef_search", int, "vector_store", default=None)
     if ef_search is not None and ef_search < 1:
         raise ConfigError("vector_store.ef_search: must be positive")
+    partitions = _take(section, "partitions", int, "vector_store", default=None)
+    if partitions is not None and partitions < 1:
+        raise ConfigError("vector_store.partitions: must be at least 1")
     return VectorStoreConfig(
         type=_take(section, "type", str, "vector_store"),
         path=_take(section, "path", str, "vector_store"),
         collection=_take(section, "collection", str, "vector_store"),
         ef_search=ef_search,
+        partitions=partitions,
     )
+
+
+_LAYOUT_MODES = ("sequential", "collective")
+_EXECUTORS = ("serial", "threads")
 
 
 def _parse_retrieval(section: dict) -> RetrievalConfig:
     _forbid_unknown(
         section, {"mode", "k", "partitions", "workers", "executor"}, "retrieval"
     )
-    mode = _take(section, "mode", str, "retrieval")
-    if mode not in ("sequential", "collective"):
+    if "partitions" in section:
+        # named here rather than as an unknown key, so a configuration
+        # written for the previous schema fails with its destination: the
+        # monolith declares no partitions, a partitioned index declares
+        # its count in the index section
+        hint = (
+            "delete the key, a monolithic index declares no partitions"
+            if section["partitions"] == 1
+            else f"declare vector_store.partitions: {section['partitions']}"
+        )
+        raise ConfigError(
+            f"retrieval.partitions: moved to vector_store.partitions; {hint}"
+        )
+    # the legacy mode key is validated here and checked against the
+    # derived layout by _validate_layout, once the whole file is parsed
+    mode = _take(section, "mode", str, "retrieval", default=None)
+    if mode is not None and mode not in _LAYOUT_MODES:
         raise ConfigError(
             f"retrieval.mode: unknown mode '{mode}'"
-            " (known: sequential, collective)"
+            f" (known: {', '.join(_LAYOUT_MODES)}; the key is optional and"
+            " derived from vector_store.partitions)"
         )
     k = _take(section, "k", int, "retrieval", default=10)
-    partitions = _take(section, "partitions", int, "retrieval", default=1)
-    workers = _take(section, "workers", int, "retrieval", default=1)
     if k <= 0:
         raise ConfigError("retrieval.k: must be positive")
-    if partitions < 1:
-        raise ConfigError("retrieval.partitions: must be at least 1")
-    if workers < 1:
+    workers = _take(section, "workers", int, "retrieval", default=None)
+    if workers is not None and workers < 1:
         raise ConfigError("retrieval.workers: must be at least 1")
-    if mode == "sequential" and (partitions != 1 or workers != 1):
-        raise ConfigError(
-            "retrieval.partitions/workers: must be 1 when mode is sequential"
-        )
-    if mode == "sequential" and "executor" in section:
-        raise ConfigError(
-            "retrieval.executor: only meaningful when mode is collective"
-        )
-    executor = _take(section, "executor", str, "retrieval", default="threads")
-    if executor not in ("serial", "threads"):
+    executor = _take(section, "executor", str, "retrieval", default=None)
+    if executor is not None and executor not in _EXECUTORS:
         raise ConfigError(
             f"retrieval.executor: unknown executor '{executor}'"
-            " (known: serial, threads)"
+            f" (known: {', '.join(_EXECUTORS)})"
         )
-    if executor == "serial" and workers != 1:
+    if executor == "serial" and workers not in (None, 1):
+        # the serial executor ignores workers; a knob that did nothing
+        # must not reach a manifest as if it had been used
         raise ConfigError(
-            "retrieval.workers: must be 1 when executor is serial"
+            "retrieval.workers: must be absent or 1 when executor is serial"
         )
-    return RetrievalConfig(
-        mode=mode, k=k, partitions=partitions, workers=workers, executor=executor
-    )
+    return RetrievalConfig(k=k, executor=executor, workers=workers)
+
+
+def layout_mode(config: PipelineConfig) -> str:
+    """The retrieval path a configuration implies, in the vocabulary of
+    the result files: ``"collective"`` (one search per partition plus a
+    global merge) when the index is partitioned, ``"sequential"`` (one
+    search over one collection) otherwise. Derived, never declared."""
+    if config.vector_store.partitions is None:
+        return "sequential"
+    return "collective"
+
+
+def resolved_execution(config: PipelineConfig) -> tuple[str | None, int | None]:
+    """The executor name and worker count a query actually runs with:
+    ``(None, None)`` on a monolithic index, where there is nothing to fan
+    out; otherwise the declared values, with ``threads`` and ``1``
+    standing in for absent keys."""
+    if config.vector_store.partitions is None:
+        return None, None
+    retrieval = config.retrieval
+    return retrieval.executor or "threads", retrieval.workers or 1
+
+
+def _validate_layout(config: PipelineConfig, legacy_mode: str | None) -> None:
+    """Rules that cross sections: execution settings need a partitioned
+    index, and a legacy ``retrieval.mode`` must agree with the layout it
+    used to declare."""
+    if config.vector_store.partitions is None:
+        for key, value in (
+            ("workers", config.retrieval.workers),
+            ("executor", config.retrieval.executor),
+        ):
+            if value is not None:
+                raise ConfigError(
+                    f"retrieval.{key}: only meaningful on a partitioned index"
+                    " (set vector_store.partitions)"
+                )
+    derived = layout_mode(config)
+    if legacy_mode is not None and legacy_mode != derived:
+        layout = "set" if derived == "collective" else "absent"
+        raise ConfigError(
+            f"retrieval.mode: '{legacy_mode}' contradicts the index layout"
+            f" (vector_store.partitions is {layout}, which implies"
+            f" '{derived}'); the key is derived: delete it, or change"
+            " vector_store.partitions"
+        )
 
 
 def _parse_generation(section: dict) -> GenerationConfig:
@@ -376,12 +452,15 @@ def load_config(path: str | Path) -> PipelineConfig:
     else:
         generation = GenerationConfig()
 
-    return PipelineConfig(
+    retrieval_section = _section(raw, "retrieval")
+    config = PipelineConfig(
         dataset=_parse_dataset(_section(raw, "dataset")),
         chunking=_parse_chunking(_section(raw, "chunking")),
         embedding=_parse_embedding(_section(raw, "embedding")),
         vector_store=_parse_vector_store(_section(raw, "vector_store")),
-        retrieval=_parse_retrieval(_section(raw, "retrieval")),
+        retrieval=_parse_retrieval(retrieval_section),
         generation=generation,
         metrics=_parse_metrics(_section(raw, "metrics")),
     )
+    _validate_layout(config, retrieval_section.get("mode"))
+    return config

@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from rag_framework.config import load_config
+from rag_framework.config import load_config, resolved_execution
 from rag_framework.metrics.exact import exact_top_k_many
 from rag_framework.metrics.manifest import run_manifest, write_report
 from rag_framework.metrics.quality import (
@@ -110,6 +110,11 @@ def main(argv: list[str] | None = None) -> int:
     layouts = []
     for path in args.collective:
         config = load_config(path)
+        if config.vector_store.partitions is None:
+            raise SystemExit(
+                f"{path}: vector_store.partitions is absent — every"
+                " --collective layout must be a partitioned index"
+            )
         # only the layout's STORE is built — never a second pipeline: a
         # second precomputed provider would duplicate the multi-GB
         # vector table for nothing (the baseline's encoder is shared)
@@ -191,9 +196,9 @@ def main(argv: list[str] | None = None) -> int:
         "layouts": [
             {
                 "config": path,
-                "partitions": config.retrieval.partitions,
-                "workers": config.retrieval.workers,
-                "executor": config.retrieval.executor,
+                "partitions": config.vector_store.partitions,
+                "executor": resolved_execution(config)[0],
+                "workers": resolved_execution(config)[1],
                 "partition_counts": store.partition_counts(),
                 "vs_baseline": summarize([e["vs_baseline"] for e in per_layout[path]]),
                 "vs_exact": summarize([e["vs_exact"] for e in per_layout[path]]),

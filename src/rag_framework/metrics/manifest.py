@@ -19,7 +19,11 @@ from importlib import metadata as importlib_metadata
 from pathlib import Path
 
 from rag_framework import __version__
-from rag_framework.config import PipelineConfig
+from rag_framework.config import (
+    PipelineConfig,
+    layout_mode,
+    resolved_execution,
+)
 
 _DEPENDENCIES = (
     "chromadb",
@@ -175,12 +179,15 @@ def build_query_payload(pipeline, result) -> dict:
     """
     provider = pipeline.embedding_provider
     encoder = getattr(provider, "query_encoder", None) or provider
+    # the mode is derived from the index layout and the execution
+    # settings are the resolved ones, so a report states what ran
+    executor, workers = resolved_execution(pipeline.config)
     return {
         "query": result.query,
-        "retrieval_mode": pipeline.config.retrieval.mode,
-        "partitions": pipeline.config.retrieval.partitions,
-        "workers": pipeline.config.retrieval.workers,
-        "executor": pipeline.config.retrieval.executor,
+        "retrieval_mode": layout_mode(pipeline.config),
+        "partitions": pipeline.config.vector_store.partitions,
+        "workers": workers,
+        "executor": executor,
         "collection": pipeline.config.vector_store.collection,
         "metrics": result.metrics,
         "answer": result.answer,
