@@ -27,6 +27,16 @@ and for how to obtain any day with the `owilix` CLI). Place the paired
 parquet trees under `./data/owi/` — the loader discovers and pairs
 shards recursively. Data is never committed.
 
+The OWI is licensed for personal, non-commercial and research use under
+the Open Web Index Licence (OWIL); `docs/dataset.md` §9 states its terms
+as they apply to this repository. The licence requires this notice in
+everything built on the OWI:
+
+> This work uses index files as part of the index partition created by
+> the OpenWebSearch.eu project, funded by the European Union's Horizon
+> Europe research and innovation programme under grant agreement No
+> 101070014 (OpenWebSearch.EU).
+
 ## Usage
 
 Build the persistent index (idempotent — safe to run twice):
@@ -46,9 +56,9 @@ for query encoding, ~600 MB, one time):
 ```
 
 Every run writes a JSON report under `metrics.output` (`./results` in
-every shipped configuration) carrying the effective
-configuration, git commit, machine, dependency versions, and dataset
-version, so any result can be reproduced.
+every shipped configuration) carrying the effective configuration, git
+commit (marked `-dirty` when the working tree held uncommitted changes),
+machine, dependency versions, and dataset version.
 
 ### Collective retrieval
 

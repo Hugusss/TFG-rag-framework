@@ -195,3 +195,44 @@ format.
   as documented above.
 - No other access or parsing failures: load with zero
   rejected records.
+
+## 9. License and attribution
+
+The OWI is distributed under the Open Web Index Licence (OWIL) v1.0
+(<https://ows.eu/owil/current>, last updated 2024-05-08). Its terms, as
+they apply to this repository:
+
+- The OWI is provided for personal, non-commercial and research use only
+  (§2b). This project is research.
+- Every presentation, application or service built on the OWI must carry
+  the following notice, word for word (§2c). The README reproduces it, and
+  so must any report, thesis or talk that uses these results:
+
+  > This work uses index files as part of the index partition created by
+  > the OpenWebSearch.eu project, funded by the European Union's Horizon
+  > Europe research and innovation programme under grant agreement No
+  > 101070014 (OpenWebSearch.EU).
+
+- The content reachable through the OWI belongs to its respective owners,
+  and reproducing or distributing it without authorization is prohibited
+  (§3). This repository therefore holds no document text: result files
+  carry record ids, URLs and aggregate numbers, the evaluation set carries
+  record ids, and `data/` and `state/` are never committed.
+- Access can be revoked at any time; on revocation all use must stop and
+  the destruction of every copy must be confirmed in writing (§8). The
+  copies this would apply to are the local trees under `data/` and the
+  indexes under `state/`.
+
+Dataset identity: OWI v2.0.0, `gpu` collection, crawl 2026-07-28, LEXIS
+specifier `OWI-Open Web Index-gpu.owie@it4i-2026-07-28:2026-07-28`
+(collection id `c881adb0-8c5f-11f1-882e-3e22d9284a8a`); the Spanish
+partition is the pinned corpus (§1). The reference publication for the
+OWI is Granitzer et al., "Impact and development of an Open Web Index for
+open web search", *Journal of the Association for Information Science and
+Technology* 75(5), 512–520, 2024, <https://doi.org/10.1002/asi.24818>.
+
+The published embeddings were produced upstream with
+`jinaai/jina-embeddings-v5-text-small`, which is released under the
+CC BY-NC 4.0 licence; this project encodes queries with the same model.
+It is downloaded from Hugging Face at first use and is not redistributed.
+

@@ -109,7 +109,10 @@ Every result file records what was measured and how:
   documents) and the manifest.
 - `query-*.json`: metrics (per-stage seconds, collective stages when
   applicable), compact source rows with provenance, embedding identity,
-  query-encoder identity.
+  query-encoder identity. A run with generation enabled also stores the
+  generated answer, which quotes document text with the extractive mock
+  generator; such reports stay local and are not committed (the OWI
+  licence reserves content to its owners, see `docs/dataset.md` §9).
 - `chunkexp-*.json`, `scaling-*.json`, `correctness-*.json`: one file
   per experiment run; `rows` / `layouts` hold per-configuration blocks;
   per-query detail is kept so any aggregate can be recomputed. Rows and
