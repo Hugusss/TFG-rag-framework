@@ -97,7 +97,13 @@ Stated as measured on the evaluation corpus (OWI v2.0.0, Spanish,
 - Several result files carry a `-dirty` git commit, meaning the working
   tree held uncommitted changes when the run was measured. The marker is
   the honest part: it says the recorded hash does not by itself pin the
-  code that produced the numbers. What each result does pin on its own is
-  the rest of the manifest — effective configuration, dataset version,
-  machine and dependency versions — and the run remains reproducible by
-  re-executing the same configuration on the same corpus.
+  code that produced the numbers. `results/README.md` maps every recorded
+  commit to its hash in the present history and sorts the dirty runs in two
+  classes: those whose only uncommitted change was the previous run's
+  report, and those that ran scripts or configurations committed later. For
+  the second class the commit that added the result is the earliest one
+  holding that code; the exact tree at run time is not recoverable. What
+  each result pins on its own is the rest of the manifest — effective
+  configuration, dataset version, machine and dependency versions — and the
+  run remains reproducible by re-executing the same configuration on the
+  same corpus.

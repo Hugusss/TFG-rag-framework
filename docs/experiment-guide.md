@@ -129,7 +129,8 @@ Every result file records what was measured and how:
   `ef_search` actually used. These are the files behind the
   corpus-growth argument in `limitations.md`.
 - Committed files under `results/` are the runs the figures and the
-  report quote. `plot_results.py` takes one file per kind and refuses
+  report quote; `results/README.md` maps each recorded commit to this
+  history and says what it pins. `plot_results.py` takes one file per kind and refuses
   to guess when several exist, because two campaigns of the same kind
   can differ in corpus and scale — a figure would change meaning
   without changing its title. Two kinds have two campaigns each
