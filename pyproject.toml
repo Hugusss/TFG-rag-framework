@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=75"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,6 +9,8 @@ description = "Modular Collective RAG Pipeline over the Open Web Index (OWI)"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Hugo Miranda Serrano" }]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 # Runtime dependencies are added together with the component that first
 # needs them, so every addition is traceable to a seam.
 dependencies = [

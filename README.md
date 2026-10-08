@@ -27,6 +27,12 @@ and for how to obtain any day with the `owilix` CLI). Place the paired
 parquet trees under `./data/owi/` — the loader discovers and pairs
 shards recursively. Data is never committed.
 
+## License
+
+The code in this repository is licensed under the Apache License,
+Version 2.0 (`LICENSE`). The data and the model it works with keep
+their own terms, which the code's license does not change.
+
 The OWI is licensed for personal, non-commercial and research use under
 the Open Web Index Licence (OWIL); `docs/dataset.md` §9 states its terms
 as they apply to this repository. The licence requires this notice in
